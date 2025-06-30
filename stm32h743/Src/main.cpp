@@ -35,6 +35,8 @@
 
 #include "thread_spi.h"
 
+#include "thread_spi.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
