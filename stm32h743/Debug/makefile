@@ -85,8 +85,8 @@ all: main-build
 main-build: stm32h743.elf secondary-outputs
 
 # Tool invocations
-stm32h743.elf stm32h743.map: $(OBJS) $(USER_OBJS) C:\Users\jashe\Documents\github\BareMetalAI_One\thread\stm32h743\STM32H743VITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-g++ -o "stm32h743.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"C:\Users\jashe\Documents\github\BareMetalAI_One\thread\stm32h743\STM32H743VITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="stm32h743.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -u _printf_float -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
+stm32h743.elf stm32h743.map: $(OBJS) $(USER_OBJS) C:\Users\jashe\Documents\github\BareMetalAI_One\stm32h743\STM32H743VITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-g++ -o "stm32h743.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"C:\Users\jashe\Documents\github\BareMetalAI_One\stm32h743\STM32H743VITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="stm32h743.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -u _printf_float -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

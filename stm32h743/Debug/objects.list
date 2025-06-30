@@ -40,6 +40,7 @@
 "./Src/stm32h7xx_it.o"
 "./Src/syscall.o"
 "./Src/system_stm32h7xx.o"
+"./Src/thread_spi.o"
 "./Src/tim.o"
 "./Src/uart.o"
 "./Startup/startup_stm32h743vitx.o"

@@ -31,7 +31,7 @@ thread/
 ---
 
 ## 4. Development Phase
-- **현재**: LCD에 "running!!!!"만 출력, 불필요한 코드 모두 정리
+- **현재**: STM32H743VIT6가 SPI 마스터로서 1초마다 "Hello World" 패킷을 슬레이브(ESP32C6)로 송신하며, 송신 결과를 LCD와 UART로 동시에 출력함
 - **다음 목표**: SPI 기반 ESP32C6와 Thread 통신, 딥러닝 네트워크 연동
 - **추가 예정**: 자체 딥러닝 모델 개발 및 임베디드 추론 기능, Thread 네트워크 통신 구현
 - **TODO**: Thread 네트워크 구성, Border Router 연동, 애플리케이션 개발, 딥러닝 모델 학습/적용 등
@@ -59,7 +59,8 @@ thread/
    - STM32CubeIDE: 프로젝트 열기 → Build → Flash  
    - Makefile: `make clean && make all`
 3. **실행**:  
-   - LCD에 "running!!!!" 문구가 반복 출력됨
+   - 1초마다 SPI로 "Hello World" 패킷을 송신 (슬레이브가 없어도 송신)
+   - LCD와 UART(시리얼 터미널)에 송신 결과("SPI OK"/"SPI FAIL")가 출력됨
 4. **의존성**: STM32 HAL, BSP, ST7735 드라이버 등
 
 ---
