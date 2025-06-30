@@ -1,5 +1,7 @@
 # Datasheet folder
 datasheet/
+stm_compare/
+.metadata/
 
 # Common files to ignore
 .DS_Store

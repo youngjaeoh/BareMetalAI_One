@@ -1,0 +1,9 @@
+../Src/syscall.c:1:5:_open_r	1
+../Src/syscall.c:4:5:_close_r	1
+../Src/syscall.c:7:5:_lseek_r	1
+../Src/syscall.c:10:6:_read_r	1
+../Src/syscall.c:13:6:_write_r	1
+../Src/syscall.c:17:5:_fstat	1
+../Src/syscall.c:21:5:_getpid_r	1
+../Src/syscall.c:26:5:_isatty_r	1
+../Src/syscall.c:30:5:_kill_r	1
