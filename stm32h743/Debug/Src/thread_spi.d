@@ -1,5 +1,4 @@
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.o: \
- ../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c \
+Src/thread_spi.o: ../Src/thread_spi.c ../Inc/thread_spi.h \
  C:/Users/jashe/Documents/github/BareMetalAI_One/stm32h743/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h \
  ../Inc/stm32h7xx_hal_conf.h \
  C:/Users/jashe/Documents/github/BareMetalAI_One/stm32h743/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h \
@@ -37,6 +36,7 @@ Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.o: \
  C:/Users/jashe/Documents/github/BareMetalAI_One/stm32h743/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h \
  C:/Users/jashe/Documents/github/BareMetalAI_One/stm32h743/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_usart.h \
  C:/Users/jashe/Documents/github/BareMetalAI_One/stm32h743/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_usart_ex.h
+../Inc/thread_spi.h:
 C:/Users/jashe/Documents/github/BareMetalAI_One/stm32h743/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h:
 ../Inc/stm32h7xx_hal_conf.h:
 C:/Users/jashe/Documents/github/BareMetalAI_One/stm32h743/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h:

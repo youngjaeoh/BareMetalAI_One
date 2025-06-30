@@ -14,6 +14,7 @@ extern "C"{
 extern void UART_Init(void);
 extern void UART_Send_Char(char ch);
 extern void UART_Send_String(char *str);
+extern UART_HandleTypeDef UartHandle;
 
 #ifdef __cplusplus 
 }

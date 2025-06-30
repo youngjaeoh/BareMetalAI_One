@@ -33,6 +33,8 @@
 
 #include <stdio.h>
 
+#include "thread_spi.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -167,7 +169,17 @@ int main(void)
 	LCD_Test();
 	while (1)
 	{
-		LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"running!!!!");
+		// LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"running!!!!");
+		HAL_StatusTypeDef result = Thread_SPI_SendHelloWorld(&hspi4);
+		if (result == HAL_OK) {
+			UART_Send_String("SPI transmit OK!\r\n");
+			LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"SPI OK");
+		} else {
+			char buf[64];
+			sprintf(buf, "SPI transmit FAIL! (code: %d)\r\n", result);
+			UART_Send_String(buf);
+			LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"SPI FAIL");
+		}
 		HAL_Delay(1000);
 	}
 	/* USER CODE END 2 */
