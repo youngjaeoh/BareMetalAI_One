@@ -1,7 +1,0 @@
-../Src/thread_spi.c:9:19:Thread_SPI_SendSystemInfo	88	static
-../Src/thread_spi.c:21:19:Thread_SPI_SendPacket	56	static
-../Src/thread_spi.c:34:19:Thread_SPI_ReceivePacket	16	static
-../Src/thread_spi.c:52:19:Thread_SPI_SendPing	48	static
-../Src/thread_spi.c:57:19:Thread_SPI_SendStatus	200	static
-../Src/thread_spi.c:73:19:Thread_SPI_ProcessReceivedData	160	static
-../Src/thread_spi.c:113:6:Thread_SPI_UpdateUptime	8	static

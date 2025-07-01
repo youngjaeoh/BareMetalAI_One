@@ -1,4 +1,0 @@
-../Src/main.cpp:144:6:void LED_Blink(uint32_t, uint32_t)	16	static
-../Src/main.cpp:302:6:void Error_Handler()	8	static
-../Src/main.cpp:240:6:void SystemClock_Config()	136	static
-../Src/main.cpp:157:5:int main()	192	static,ignoring_inline_asm
