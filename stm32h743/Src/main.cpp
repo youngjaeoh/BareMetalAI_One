@@ -169,19 +169,66 @@ int main(void)
 	UART_Init();
 	/* USER CODE BEGIN 2 */
 	LCD_Test();
+
+	uint32_t test_counter = 0;
+	Thread_SPI_Packet_t received_packet;
+
+	UART_Send_String("Thread IoT SPI Bidirectional Test Started!\r\n");
+
+	ST7735_LCD_Driver.FillRect(&st7735_pObj, 0, 0, ST7735Ctx.Width, ST7735Ctx.Height, BLACK);
+	LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"SPI Bidirectional");
+
+	auto clearLine = [](uint16_t y, uint16_t height = 16) {
+		ST7735_LCD_Driver.FillRect(&st7735_pObj, 0, y, ST7735Ctx.Width, height, BLACK);
+	};
+
 	while (1)
 	{
-		HAL_StatusTypeDef result = Thread_SPI_SendHelloWorld(&hspi4);
-		if (result == HAL_OK) {
-			UART_Send_String("SPI transmit OK!\r\n");
-			LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"SPI OK");
+		Thread_SPI_UpdateUptime();
+
+		// Send System Info, Status, Ping
+		HAL_StatusTypeDef send_result = Thread_SPI_SendSystemInfo(&hspi4);
+		HAL_StatusTypeDef status_result = Thread_SPI_SendStatus(&hspi4);
+		HAL_StatusTypeDef ping_result = Thread_SPI_SendPing(&hspi4);
+
+		// Receive Data From ESP32C6
+		HAL_StatusTypeDef receive_result = Thread_SPI_ReceivePacket(&hspi4, &received_packet);
+
+		// Send OK
+		clearLine(20);
+		LCD_ShowString(0, 20, ST7735Ctx.Width, 16, 16, (uint8_t*)"Send OK!");
+		HAL_Delay(2000);
+
+		// Check Send Result
+		char status_str[64];
+		if (send_result == HAL_OK && status_result == HAL_OK && ping_result == HAL_OK) {
+			sprintf(status_str, "TX: OK, RX: %s", (receive_result == HAL_OK) ? "OK" : "NO DATA");
+			clearLine(20);
+			LCD_ShowString(0, 20, ST7735Ctx.Width, 16, 16, (uint8_t*)status_str);
+			UART_Send_String("SPI bidirectional test OK\r\n");
 		} else {
-			char buf[64];
-			sprintf(buf, "SPI transmit FAIL! (code: %d)\r\n", result);
-			UART_Send_String(buf);
-			LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"SPI FAIL");
+			sprintf(status_str, "TX: FAIL, RX: %s", (receive_result == HAL_OK) ? "OK" : "NO DATA");
+			clearLine(20);
+			LCD_ShowString(0, 20, ST7735Ctx.Width, 16, 16, (uint8_t*)status_str);
+			UART_Send_String("SPI bidirectional test FAIL\r\n");
 		}
-		HAL_Delay(1000);
+
+		// Process Received Data
+		if (receive_result == HAL_OK) {
+			Thread_SPI_ProcessReceivedData(&received_packet);
+			clearLine(40);
+			LCD_ShowString(0, 40, ST7735Ctx.Width, 16, 16, (uint8_t*)"Data Received!");
+		} else {
+			clearLine(40);
+			LCD_ShowString(0, 40, ST7735Ctx.Width, 16, 16, (uint8_t*)"Waiting for slave...");
+		}
+
+		// Show Test Counter
+		char counter_str[32];
+		sprintf(counter_str, "Test #%lu", ++test_counter);
+		LCD_ShowString(0, 60, ST7735Ctx.Width, 16, 16, (uint8_t*)counter_str);
+
+		HAL_Delay(2000);
 	}
 	/* USER CODE END 2 */
 }
