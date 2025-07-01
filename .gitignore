@@ -3,6 +3,21 @@ datasheet/
 stm_compare/
 .metadata/
 
+# STM32 Build outputs
+Debug/
+Release/
+*.o
+*.d
+*.su
+*.map
+*.list
+*.elf
+*.bin
+*.hex
+*.axf
+*.exe
+*.cyclo
+
 # Common files to ignore
 .DS_Store
 Thumbs.db
