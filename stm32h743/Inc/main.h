@@ -72,6 +72,11 @@ void Error_Handler(void);
 #define USART1_TX_Port	GPIOB
 #define USART1_RX_Pin	GPIO_PIN_15
 #define USART1_RX_Port	GPIOB
+#define USART2_TX_Pin GPIO_PIN_2
+#define USART2_TX_Port  GPIOA
+#define USART2_RX_Pin GPIO_PIN_3
+#define USART2_RX_Port GPIOA
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
