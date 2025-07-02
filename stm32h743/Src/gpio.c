@@ -102,6 +102,22 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF4_USART1;
   HAL_GPIO_Init(USART1_RX_Port, &GPIO_InitStruct);
+
+  /* USART2 TX for uart tx : PA2 */
+  GPIO_InitStruct.Pin = USART2_TX_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
+  HAL_GPIO_Init(USART2_TX_Port, &GPIO_InitStruct);
+
+  /* USART2 RX for uart rx : PB15 */
+  GPIO_InitStruct.Pin = USART2_RX_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
+  HAL_GPIO_Init(USART2_RX_Port, &GPIO_InitStruct);
 }
 
 /* USER CODE BEGIN 2 */

@@ -35,7 +35,9 @@
 
 #include "thread_spi.h"
 
-#include "thread_spi.h"
+#include "queue.h"
+
+#include "sleepbreathing.h"
 
 /* USER CODE END Includes */
 
@@ -57,6 +59,9 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+// UART Data Buffer
+CircularQueue uart1_rx_queue;
+CircularQueue uart2_rx_queue;
 
 /* USER CODE END PV */
 
@@ -169,6 +174,11 @@ int main(void)
 	UART_Init();
 	/* USER CODE BEGIN 2 */
 	LCD_Test();
+	uint8_t text[32];
+
+	// Initialize UART RX Queues
+	//queue_init(&uart1_rx_queue);
+	queue_init(&uart2_rx_queue);
 
 	uint32_t test_counter = 0;
 	Thread_SPI_Packet_t received_packet;
@@ -227,6 +237,37 @@ int main(void)
 		char counter_str[32];
 		sprintf(counter_str, "Test #%lu", ++test_counter);
 		LCD_ShowString(0, 60, ST7735Ctx.Width, 16, 16, (uint8_t*)counter_str);
+
+		if(uart1_rx_flag){
+			uart1_rx_flag = 0;
+			sprintf((char *)&text, "Uart1 Rx : %c\r\n", uart1_rx_data);
+			UART_Send_String((char *)text);
+		}
+
+		// Send the data to mmWave Radar via UART2
+		uint8_t data[7] = {0x55, 0x06, 0x00, 0x02, 0x05, 0x0D, 0x01};
+		makechecksum(data, 7); // Create checksum for the data
+		
+		if(uart2_rx_flag){
+			uart2_rx_flag = 0;
+			
+			// Check if queue is full, if so, dequeue oldest data
+			if(queue_is_full(&uart2_rx_queue)){
+				sprintf((char *)&text, "Queue Full! Dequeueing...\r\n");
+				UART_Send_String((char *)text);
+				// Dequeue the oldest data if the queue is full
+				queue_dequeue(&uart2_rx_queue);
+			}
+			
+			// Enqueue received data
+			queue_enqueue(&uart2_rx_queue, uart2_rx_data);
+		}
+
+		// Process radar data periodically when queue has sufficient data
+		// Only process if we have at least minimum packet size worth of data
+		if(queue_size(&uart2_rx_queue) >= MAX_DATA_LEN) {  // Minimum: header + length + command + data
+			radar_data_process(&uart2_rx_queue);
+		}
 
 		HAL_Delay(2000);
 	}
