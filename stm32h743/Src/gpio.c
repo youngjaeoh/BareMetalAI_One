@@ -111,7 +111,7 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
   HAL_GPIO_Init(USART2_TX_Port, &GPIO_InitStruct);
 
-  /* USART2 RX for uart rx : PB15 */
+  /* USART2 RX for uart rx : PA3 */
   GPIO_InitStruct.Pin = USART2_RX_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;

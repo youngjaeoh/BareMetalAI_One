@@ -168,31 +168,30 @@ typedef struct {
 # STM32CubeIDE
 프로젝트 열기 → Build → Flash
 
-# 현재 상태: 빌드 완료 ✅
-# 하드웨어 테스트: mmWave 레이더 연결 대기 중 🔧
+# Makefile
+make clean && make all
 ```
 
 ### **실행 결과**
 ```
-Queue system initialized
-Sleep breathing monitor ready
 SPI bidirectional test OK
-Sending System Info: BAREMETALAI_ONE_7000
-Monitoring sleep patterns...
+Sending System Info: STM32H743_7000
+Sending Status - Uptime: 7000 ms, Temp: 24.2C, Memory: 512 KB
+Sending PING
 ```
 
 ### **LCD 표시**
-- **첫 번째 줄**: "BAREMETALAI_ONE"
-- **두 번째 줄**: Queue 상태 및 데이터 처리
-- **세 번째 줄**: Sleep breathing 모니터링 상태
-- **네 번째 줄**: 시스템 상태 및 카운터
+- **첫 번째 줄**: "SPI Bidirectional"
+- **두 번째 줄**: 송신/수신 상태
+- **세 번째 줄**: 수신 데이터 상태
+- **네 번째 줄**: 테스트 카운터
 
 ---
 
-## 11. 참고/문서
+## 9. 참고/문서
 - [ST 공식 문서](https://www.st.com/)
-- [TensorFlow Lite Micro](https://www.tensorflow.org/lite/microcontrollers)
-- [STM32H743VIT6 Reference Manual](https://www.st.com/resource/en/reference_manual/rm0433-stm32h742-stm32h743753-and-stm32h750-value-line-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
+- [Thread Group](https://www.threadgroup.org/)
+- [Seeed Studio XIAO ESP32C6](https://wiki.seeedstudio.com/XIAO_ESP32C6/)
 - [STM32 HAL SPI](https://www.st.com/resource/en/user_manual/dm00105879-description-of-stm32f4-hal-and-ll-drivers-stmicroelectronics.pdf)
 
 ---
