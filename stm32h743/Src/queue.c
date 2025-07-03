@@ -1,4 +1,5 @@
 #include "queue.h"
+#include "uart.h"
 // 필요시 stdint.h, stdbool.h는 queue.h에서 include되어야 함
 
 void queue_init(CircularQueue *q) {
@@ -25,7 +26,8 @@ bool queue_enqueue(CircularQueue *q, uint8_t data) {
 
 uint8_t queue_dequeue(CircularQueue *q) {
     if (queue_is_empty(q)) {
-        return -1;  // Error value
+        UART_Send_String("Queue is empty\r\n");
+        for(;;);  // Error value
     }
     uint8_t data = q->buffer[q->head];
     q->head = (q->head + 1) % MAX_QUEUE_SIZE;
@@ -43,6 +45,6 @@ uint8_t queue_size(CircularQueue *q) {
     if (q->tail >= q->head) {
         return (q->tail - q->head);
     } else {
-        return (MAX_QUEUE_SIZE - q->head + q->tail);
+        return (MAX_QUEUE_SIZE - (q->head - q->tail));
     }
 }

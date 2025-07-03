@@ -192,6 +192,9 @@ int main(void)
 		ST7735_LCD_Driver.FillRect(&st7735_pObj, 0, y, ST7735Ctx.Width, height, BLACK);
 	};
 
+	uint8_t data[7] = {0x55, 0x06, 0x00, 0x02, 0x05, 0x0D, 0x01};
+	makechecksum(data, 7); // Create checksum for the data
+
 	while (1)
 	{
 		Thread_SPI_UpdateUptime();
@@ -220,7 +223,7 @@ int main(void)
 			sprintf(status_str, "TX: FAIL, RX: %s", (receive_result == HAL_OK) ? "OK" : "NO DATA");
 			clearLine(20);
 			LCD_ShowString(0, 20, ST7735Ctx.Width, 16, 16, (uint8_t*)status_str);
-			UART_Send_String("SPI bidirectional test FAIL\r\n");
+			//UART_Send_String("SPI bidirectional test FAIL\r\n");
 		}
 
 		// Process Received Data
@@ -245,13 +248,9 @@ int main(void)
 		}
 
 		// Send the data to mmWave Radar via UART2
-		uint8_t data[7] = {0x55, 0x06, 0x00, 0x02, 0x05, 0x0D, 0x01};
-		makechecksum(data, 7); // Create checksum for the data
 		
 		if(uart2_rx_flag){
 			uart2_rx_flag = 0;
-			
-			// Check if queue is full, if so, dequeue oldest data
 			if(queue_is_full(&uart2_rx_queue)){
 				sprintf((char *)&text, "Queue Full! Dequeueing...\r\n");
 				UART_Send_String((char *)text);
@@ -259,17 +258,10 @@ int main(void)
 				queue_dequeue(&uart2_rx_queue);
 			}
 			
-			// Enqueue received data
-			queue_enqueue(&uart2_rx_queue, uart2_rx_data);
 		}
+		radar_data_process(&uart2_rx_queue);
 
-		// Process radar data periodically when queue has sufficient data
-		// Only process if we have at least minimum packet size worth of data
-		if(queue_size(&uart2_rx_queue) >= MAX_DATA_LEN) {  // Minimum: header + length + command + data
-			radar_data_process(&uart2_rx_queue);
-		}
-
-		HAL_Delay(2000);
+		HAL_Delay(100);
 	}
 	/* USER CODE END 2 */
 }

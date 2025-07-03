@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-#define MAX_QUEUE_SIZE 24
+#define MAX_QUEUE_SIZE 150
 
 // Embedded System에서 maxSize를 정적으로 정의해야 하나?
 typedef struct {

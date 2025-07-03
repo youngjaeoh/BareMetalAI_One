@@ -1,4 +1,11 @@
 #include "sleepbreathing.h"
+// Static instance to maintain message parsed
+typedef struct{
+  uint8_t currentMsg[MAX_DATA_LEN];
+  bool startParsing;
+} parsingContext;
+
+static parsingContext pContext = {0};
 
 // Forward declaration for sprintf function
 //int sprintf(char *str, const char *format, ...);
@@ -55,161 +62,74 @@ static const unsigned char cuc_CRCLo[] = {
 };
 
 void radar_data_process(CircularQueue *queue) {
-    static bool recvInProgress = false;
-    static uint8_t ndx = 0;
-    uint8_t startMarker = MESSAGE_HEAD; // Header frame (0x55)
-    uint8_t dataLen = 0;
-    uint8_t Msg[MAX_DATA_LEN] = {0,}; // Data buffer
-    bool newData = false;
+    const uint8_t startMarker = MESSAGE_HEAD; // Header frame (0x55)
+    char queue_size_str[30];
 
-    // Process data byte by byte until we find a complete message or queue is empty
-    while (!queue_is_empty(queue) && !newData) {
-        uint8_t rb = queue_dequeue(queue);
+    // Process all complete data packets in the queue
+    while (!queue_is_empty(queue)) {
+        //first check for queue size
+        //sprintf(queue_size_str, "** Queue Size : %d **\r\n", queue_size(queue));
+        //UART_Send_String(queue_size_str);
+        // Check if first byte is start marker
+        uint8_t first_byte = queue_peek(queue);
+        if(first_byte != startMarker) {
+          // Invalid start marker - halt system
+          if(!pContext.startParsing) {
+            UART_Send_String("** ERROR: Invalid start marker! System halted **\r\n");
+            for(;;); // Halt system
+          }
+        }
+        else{
+          // Valid start marker - reset parsing context
+          pContext.startParsing = true;
+          queue_dequeue(queue); // Remove start marker from queue
+        }
+        memset(pContext.currentMsg, 0, MAX_DATA_LEN);
+        // Check if we have at least one more byte for data length
+        if(queue_is_empty(queue)) {
+            UART_Send_String("** ERROR: No data length byte! System halted **\r\n");
+            return; //rerun the function
+        }
+        // Get data length
+        uint8_t dataLen = queue_peek(queue);
+        // Validate data length
+        if(dataLen > MAX_DATA_LEN || dataLen == 0) {
+            UART_Send_String("** ERROR: Invalid data length! System halted **\r\n");
+            for(;;); // Halt system
+        }
         
-        if(!recvInProgress) {
-            // Looking for start marker
-            if(rb == startMarker) {
-                recvInProgress = true;
-                ndx = 0; // Reset index when starting new message
-            }
+        // Check if we have enough bytes in queue for the complete message
+        if(queue_size(queue) < dataLen) {
+            char error_msg[85];
+            sprintf(error_msg, "** ERROR: Incomplete message in queue! System halted : %02X, %02X **\r\n", dataLen-1, queue_size(queue));
+            UART_Send_String(error_msg);
+            continue;
         }
-        else {
-            // Receiving message data
-            if(ndx < MAX_DATA_LEN) {
-                Msg[ndx] = rb;
-                if(ndx == 0) dataLen = Msg[0]; // First byte is data length
-                ndx++;
-            }
-            // Check if we have received the complete message
-            else {
-                recvInProgress = false;
-                ndx = 0;
-                newData = true;
-            }
+        
+        // Copy remaining data from queue to currentMsg
+        for(uint8_t i = 0; i < dataLen; i++) {
+            pContext.currentMsg[i] = queue_dequeue(queue);
         }
+        //second check for queue size
+        //sprintf(queue_size_str, "** Queue Size : %d **\r\n", queue_size(queue));
+        //UART_Send_String(queue_size_str);
+        if(pContext.currentMsg[2] == SLEEP_INF){
+#ifdef RADAR_DEBUG_MODE
+            ShowData(pContext.currentMsg);
+#endif
+        }
+        pContext.startParsing = false; // Reset parsing state
     }
-    
-    // Process the complete message if we have one
-    if(newData) {
-        SleepInfer(Msg);
-    }
-}
-
-//Sleep time decoding
-void SleepTimeCalculate(uint8_t inf1, uint8_t inf2, uint8_t inf3, uint8_t inf4){
-  uint32_t rel = 0;
-  rel = (inf1 << 24) + (inf2 << 16) + (inf3 << 8) + (inf4);
-  char time_str[20];
-  sprintf(time_str, "%lu\r\n", rel);
-  UART_Send_String(time_str);
 }
 
 //Radar transmits data frames for display via serial port
-void ShowData(uint8_t inf[]){
+void ShowData(const uint8_t inf[]){
+  char hex_str[9]; // 4 + 10 extra bytes for safety
   for (uint8_t n = 0; n < MAX_DATA_LEN; n++) {
-    char hex_str[4];
     sprintf(hex_str, "%02X ", inf[n]);
     UART_Send_String(hex_str);
   }
   UART_Send_String("\r\n");
-}
-
-//Respiratory sleep data frame decoding
-void SleepInfer(uint8_t* inf){
-  switch(inf[3]){
-    case SLEEP_INF:
-#ifdef RADAR_DEBUG_MODE
-      ShowData(inf);
-#endif
-      switch(inf[4]){
-        case BREATH:
-          switch(inf[5]){
-            case BREATH_RATE:
-              UART_Send_String("The current detected respiratory rate is: ");
-              // Convert int to string and send
-              char rate_str[10];
-              sprintf(rate_str, "%d\r\n", inf[6]);
-              UART_Send_String(rate_str);
-              break;
-            case CHECK_SIGN:
-              switch(inf[6]){
-                case BREATH_HOLD:
-                  UART_Send_String("Abnormal breath-holding detected.\r\n");
-                  break;
-                case BREATH_NULL:
-                  UART_Send_String("No detection signal at the moment.\r\n");
-                  break;
-                case BREATH_NORMAL:
-                  UART_Send_String("Normal breathing was detected.\r\n");
-                  break;
-                case BREATH_MOVE:
-                  UART_Send_String("Abnormal motion is detected.\r\n");
-                  break;
-                case BREATH_RAPID:
-                  UART_Send_String("Abnormal shortness of breath was detected.\r\n");
-                  break;
-              }
-              break;
-          }
-          break;
-        case SCENARIO:
-          switch(inf[5]){
-            case CLOSE_AWAY_BED:
-              switch(inf[6]){
-                case AWAY_BED:
-                  UART_Send_String("Detects someone leaving the bed.\r\n");
-                  break;
-                case CLOSE_BED:
-                  UART_Send_String("Detects someone in bed.\r\n");
-                  break;
-              }
-              break;
-            case SLEEP_STATE:
-              switch(inf[6]){
-                case AWAKE:
-                  UART_Send_String("Current user status detected: Awake.\r\n");
-                  break;
-                case LIGHT_SLEEP:
-                  UART_Send_String("Current user status detected: Light sleep.\r\n");
-                  break;
-                case DEEP_SLEEP:
-                  UART_Send_String("Current user status detected: Deep sleep.\r\n");
-                  break;
-                case SLEEP_NULL:
-                  UART_Send_String("Current user status detected: NULL.\r\n");
-                  break;
-              }
-              break;
-          }
-          break;
-        case SLEEP_TIME:
-          switch(inf[5]){
-            case AWAKE_TIME:
-              UART_Send_String("The user's awake time is detected as: ");
-              break;
-            case LIGHT_SLEEP_TIME:
-              UART_Send_String("The user's light sleep time is detected as: ");
-              break;
-            case DEEP_SLEEP_TIME:
-              UART_Send_String("The user's deep sleep time is detected as: ");
-              break;
-          }
-          SleepTimeCalculate(inf[6], inf[7], inf[8], inf[9]);
-          break;
-        case SLEEP_QUALITY:
-          switch(inf[5]){
-            case SLEEP_SCORE:
-              UART_Send_String("Judgment of sleep quality scores: ");
-              char score_str[10];
-              sprintf(score_str, "%d\r\n", inf[6]);
-              UART_Send_String(score_str);
-              break;
-          }
-          break;
-      }
-      UART_Send_String("----------------------------\r\n");
-      break;
-  }
 }
 
 // Function to calculate CRC16 checksum
@@ -235,7 +155,7 @@ void makechecksum(uint8_t* data, uint8_t length) {
     uint16_t crc_data = CalculateCrc16(datas, length);
     
 #ifdef RADAR_DEBUG_MODE
-    char buff[32];
+    char buff[42]; // 32 + 10 extra bytes for safety
     sprintf(buff, "The CRC16 value is : %04x \r\n", crc_data);
     UART_Send_String(buff);
 #endif

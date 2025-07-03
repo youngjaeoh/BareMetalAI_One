@@ -60,7 +60,8 @@ void DMA_STR0_IRQHandler(void);
 void DCMI_IRQHandler(void);
 void TIM16_IRQHandler(void);
 /* USER CODE BEGIN EFP */
-
+void USART1_IRQHandler(void);
+void USART2_IRQHandler(void);
 /* USER CODE END EFP */
 
 #ifdef __cplusplus

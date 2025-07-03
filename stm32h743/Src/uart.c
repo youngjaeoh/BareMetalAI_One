@@ -19,7 +19,9 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "uart.h"
+#include "queue.h"
 
+extern CircularQueue uart2_rx_queue;
 volatile int uart1_rx_flag;
 volatile char uart1_rx_data;
 
@@ -89,17 +91,27 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 	RCC_PeriphCLKInitTypeDef RCC_PeriphClkInit;
 
 	if(huart->Instance == USART1){
+		/* Enable USART1 clock */
+		__HAL_RCC_USART1_CLK_ENABLE();
+		
 		RCC_PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART16;
 		RCC_PeriphClkInit.Usart16ClockSelection = RCC_USART16CLKSOURCE_D2PCLK2;
 		HAL_RCCEx_PeriphCLKConfig(&RCC_PeriphClkInit);
+
+    __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
 
 		HAL_NVIC_SetPriority(USART1_IRQn, 0, 1);
 		HAL_NVIC_EnableIRQ(USART1_IRQn);
 	}
   else if(huart->Instance == USART2){
+		/* Enable USART2 clock */
+		__HAL_RCC_USART2_CLK_ENABLE();
+		
     RCC_PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2;
 		RCC_PeriphClkInit.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
 		HAL_RCCEx_PeriphCLKConfig(&RCC_PeriphClkInit);
+
+    __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
 
 		HAL_NVIC_SetPriority(USART2_IRQn, 0, 1);
 		HAL_NVIC_EnableIRQ(USART2_IRQn);
@@ -132,4 +144,5 @@ void USART1_Rx_ISR(UART_HandleTypeDef* huart){
 void USART2_Rx_ISR(UART_HandleTypeDef* huart){
 	uart2_rx_flag = 1;
 	HAL_UART_Receive(huart, (uint8_t*)&uart2_rx_data, 1, HAL_MAX_DELAY);
+  queue_enqueue(&uart2_rx_queue, uart2_rx_data);
 }
