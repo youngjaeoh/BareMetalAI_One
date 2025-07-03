@@ -36,7 +36,7 @@
 #include "thread_spi.h"
 
 #include "queue.h"
-
+#include "buzzer.h"
 #include "sleepbreathing.h"
 
 /* USER CODE END Includes */
@@ -263,6 +263,20 @@ int main(void)
 		#endif
 
 		HAL_Delay(100);
+		// Enhanced Buzzer Test - Test every 100 iterations
+		#ifdef USE_BUZZER
+		if (test_counter % 100 == 0) {
+			// Test sequence: Short beep, pause, longer beep, pause, triple beep
+			Buzzer_Test(500);   // 500ms beep
+			HAL_Delay(300);     // 300ms pause
+			
+			// Triple beep
+			for(int i = 0; i < 3; i++) {
+				Buzzer_Test(130);   // 130ms beep
+				HAL_Delay(80);     // 80ms pause between beeps
+			}
+		}
+		#endif
 	}
 	/* USER CODE END 2 */
 }
