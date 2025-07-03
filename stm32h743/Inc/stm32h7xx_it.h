@@ -28,7 +28,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "uart.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -61,7 +61,9 @@ void DCMI_IRQHandler(void);
 void TIM16_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 void USART1_IRQHandler(void);
+#ifdef USE_UART2
 void USART2_IRQHandler(void);
+#endif
 /* USER CODE END EFP */
 
 #ifdef __cplusplus

@@ -21,15 +21,22 @@
 #include "uart.h"
 #include "queue.h"
 
+#ifdef USE_UART2
 extern CircularQueue uart2_rx_queue;
+#endif
+
 volatile int uart1_rx_flag;
 volatile char uart1_rx_data;
 
+#ifdef USE_UART2
 volatile int uart2_rx_flag;
 volatile char uart2_rx_data;
+#endif
 
 UART_HandleTypeDef huart1;
+#ifdef USE_UART2
 UART_HandleTypeDef huart2;
+#endif
 
 PUTCHAR_PROTOTYPE
 {
@@ -42,7 +49,9 @@ PUTCHAR_PROTOTYPE
 
 void UART_Init(void){
 	UART1_Init();
+#ifdef USE_UART2
 	UART2_Init();
+#endif
 }
 
 // 각 USART/UART 장치별로 작성 -- 장치가 추가되면 장치별로 이름 바꿔가면서 추가
@@ -65,6 +74,7 @@ void UART1_Init(void){
   huart1.RxISR = USART1_Rx_ISR;
 }
 
+#ifdef USE_UART2
 void UART2_Init(void){
   huart2.Instance        = USART2;
   huart2.Init.BaudRate   = 9600;
@@ -83,6 +93,7 @@ void UART2_Init(void){
 
   huart2.RxISR = USART2_Rx_ISR;
 }
+#endif
 
 
 // 모든 USART/UART 장치 통합 작성 -- 이 코드는 HAL_UART_Init이 실행될 때 해당 함수 실행. 그래서 전체 장치에 대한 코드가 같이 있어야 해.
@@ -103,6 +114,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 		HAL_NVIC_SetPriority(USART1_IRQn, 0, 1);
 		HAL_NVIC_EnableIRQ(USART1_IRQn);
 	}
+#ifdef USE_UART2
   else if(huart->Instance == USART2){
 		/* Enable USART2 clock */
 		__HAL_RCC_USART2_CLK_ENABLE();
@@ -116,6 +128,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 		HAL_NVIC_SetPriority(USART2_IRQn, 0, 1);
 		HAL_NVIC_EnableIRQ(USART2_IRQn);
 	}
+#endif
 }
 
 void UART_Send_Char(char ch){
@@ -126,6 +139,7 @@ void UART_Send_String(char *str){
 	HAL_UART_Transmit(&huart1, (uint8_t*)str, strlen(str), HAL_MAX_DELAY); 
 }
 
+#ifdef USE_UART2
 // UART2 transmission functions for mmWave Radar communication
 void UART2_Send_Data(uint8_t* data, uint8_t length) {
 	HAL_UART_Transmit(&huart2, data, length, HAL_MAX_DELAY);
@@ -135,14 +149,17 @@ void UART2_Send_Data(uint8_t* data, uint8_t length) {
 HAL_StatusTypeDef UART2_Send_Data_WithStatus(uint8_t* data, uint8_t length) {
 	return HAL_UART_Transmit(&huart2, data, length, HAL_MAX_DELAY);
 }
+#endif
 
 void USART1_Rx_ISR(UART_HandleTypeDef* huart){
 	uart1_rx_flag = 1;
 	HAL_UART_Receive(huart, (uint8_t*)&uart1_rx_data, 1, HAL_MAX_DELAY);
 }
 
+#ifdef USE_UART2
 void USART2_Rx_ISR(UART_HandleTypeDef* huart){
 	uart2_rx_flag = 1;
 	HAL_UART_Receive(huart, (uint8_t*)&uart2_rx_data, 1, HAL_MAX_DELAY);
   queue_enqueue(&uart2_rx_queue, uart2_rx_data);
 }
+#endif

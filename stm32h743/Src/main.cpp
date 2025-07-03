@@ -191,9 +191,10 @@ int main(void)
 	auto clearLine = [](uint16_t y, uint16_t height = 16) {
 		ST7735_LCD_Driver.FillRect(&st7735_pObj, 0, y, ST7735Ctx.Width, height, BLACK);
 	};
-
+	#ifdef USE_UART2
 	uint8_t data[7] = {0x55, 0x06, 0x00, 0x02, 0x05, 0x0D, 0x01};
 	makechecksum(data, 7); // Create checksum for the data
+	#endif
 
 	while (1)
 	{
@@ -248,7 +249,7 @@ int main(void)
 		}
 
 		// Send the data to mmWave Radar via UART2
-		
+		#ifdef USE_UART2
 		if(uart2_rx_flag){
 			uart2_rx_flag = 0;
 			if(queue_is_full(&uart2_rx_queue)){
@@ -257,9 +258,9 @@ int main(void)
 				// Dequeue the oldest data if the queue is full
 				queue_dequeue(&uart2_rx_queue);
 			}
-			
 		}
 		radar_data_process(&uart2_rx_queue);
+		#endif
 
 		HAL_Delay(100);
 	}
