@@ -13,6 +13,7 @@ STM32H743VIT6 기반의 Bare Metal AI 프로젝트.
 - **LCD**: ST7735
 - **Debug**: UART1
 - **SPI**: SPI4
+- **SPI3**: STM - ESP32C6 SPI Connection
 - **mmWave Radar**: 연결 대기 중 (IO PIN 사이즈 불일치 해결 필요)
 - **기타**: (필요시 핀맵, 회로도, 연결 사진 등 추가)
 
@@ -20,30 +21,24 @@ STM32H743VIT6 기반의 Bare Metal AI 프로젝트.
 
 ## 3. Project Structure
 ```
-BAREMETALAI_ONE/
+BareMetalAI_One/
+  ├── datasheet/                  # 데이터시트 및 참고자료
+  ├── esp32c6/
+  │   ├── pingpong/              # ESP32C6 Master-Slave Pingpong
+  │   └── Thread_Slave/          # ESP32C6 Thread End Device + Master-Slave
   ├── stm32h743/
-  │   ├── Src/
-  │   │   ├── main.cpp              # 메인 애플리케이션
-  │   │   ├── thread_spi.c          # 양방향 SPI 통신 프로토콜
-  │   │   ├── queue.c               # 큐 기반 데이터 처리 시스템
-  │   │   ├── sleepbreathing.c      # 수면 호흡 모니터링 모듈
-  │   │   ├── gpio.c                # GPIO 제어
-  │   │   ├── uart.c                # UART 통신
-  │   │   └── ...
-  │   ├── Inc/
-  │   │   ├── thread_spi.h          # SPI 통신 프로토콜 정의
-  │   │   ├── queue.h               # 큐 시스템 헤더
-  │   │   ├── sleepbreathing.h      # 수면 호흡 모니터링 헤더
-  │   │   ├── main.h                # 메인 헤더
-  │   │   ├── uart.h                # UART 헤더
-  │   │   └── ...
-  │   ├── Drivers/
-  │   │   ├── BSP/ST7735/           # ST7735 LCD 드라이버
-  │   │   ├── STM32H7xx_HAL_Driver/ # STM32 HAL 드라이버
-  │   │   └── ...
-  │   ├── TFLM/                     # TensorFlow Lite Micro
+  │   ├── Inc/                   # STM32 헤더 파일
+  │   ├── Src/                   # STM32 소스 파일
+  │   ├── Drivers/               # BSP, HAL, CMSIS 등 드라이버
+  │   ├── TFLM/                  # TensorFlow Lite Micro
+  │   ├── models/                # (딥러닝 모델 등)
+  │   ├── SPI_Protocol_Documentation.md # SPI 프로토콜 문서
   │   └── ...
-  └── README.md
+  ├── stm_compare/               # STM32 비교/테스트 자료
+  ├── thread/                    # (Thread 네트워크 관련 자료)
+  ├── Scenario.md                # 시나리오/기획 문서
+  ├── README.md                  # 프로젝트 설명서
+  └── LICENSE
 ```
 
 ---
