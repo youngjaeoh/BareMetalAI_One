@@ -2,7 +2,7 @@
 datasheet/
 stm_compare/
 .metadata/
-esp32c6/Thread_Slave/.devcontainer
+esp32c6/Thread_Slave_test
 
 # ESP32 specific files
 *.clangd

@@ -1,4 +1,2 @@
-idf_component_register(SRCS "app_main.c"
-                    INCLUDE_DIRS "."
-                    REQUIRES openthread
-)
+idf_component_register(SRCS "esp_ot_cli.c"
+                       INCLUDE_DIRS ".")

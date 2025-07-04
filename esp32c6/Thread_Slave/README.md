@@ -1,53 +1,132 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C6 | ESP32-H2 | ESP32-P4 | ESP32-S2 | ESP32-S3 | Linux |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | ----- |
+| Supported Targets | ESP32-C6 | ESP32-H2 |
+| ----------------- | -------- | -------- |
 
-# Hello World Example
+# OpenThread Command Line Example
 
-Starts a FreeRTOS task to print "Hello World".
-
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+This example demonstrates an [OpenThread CLI](https://github.com/openthread/openthread/blob/master/src/cli/README.md), with some additional features such as TCP, UDP and Iperf.
 
 ## How to use example
 
-Follow detailed instructions provided specifically for this example.
+### Hardware Required
 
-Select the instructions depending on Espressif chip installed on your development board:
+To run this example, a board with IEEE 802.15.4 module (for example ESP32-H2) is required.
 
-- [ESP32 Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/index.html)
-- [ESP32-S2 Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/get-started/index.html)
-
-
-## Example folder contents
-
-The project **hello_world** contains one source file in C language [hello_world_main.c](main/hello_world_main.c). The file is located in folder [main](main).
-
-ESP-IDF projects are built using CMake. The project build configuration is contained in `CMakeLists.txt` files that provide set of directives and instructions describing the project's source files and targets (executable, library, or both).
-
-Below is short explanation of remaining files in the project folder.
+### Configure the project
 
 ```
-├── CMakeLists.txt
-├── pytest_hello_world.py      Python script used for automated testing
-├── main
-│   ├── CMakeLists.txt
-│   └── hello_world_main.c
-└── README.md                  This is the file you are currently reading
+idf.py menuconfig
 ```
 
-For more information on structure and contents of ESP-IDF projects, please refer to Section [Build System](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/build-system.html) of the ESP-IDF Programming Guide.
+The example can run with the default configuration. OpenThread Command Line is enabled with UART as the default interface. Additionally, USB JTAG is also supported and can be activated through the menuconfig:
 
-## Troubleshooting
+```
+Component config → ESP System Settings → Channel for console output → USB Serial/JTAG Controller
+```
 
-* Program upload failure
+### Build, Flash, and Run
 
-    * Hardware connection is not correct: run `idf.py -p PORT monitor`, and reboot your board to see if there are any output logs.
-    * The baud rate for downloading is too high: lower your baud rate in the `menuconfig` menu, and try again.
+Build the project and flash it to the board, then run monitor tool to view serial output:
 
-## Technical support and feedback
+```
+idf.py -p PORT build flash monitor
+```
 
-Please use the following feedback channels:
+Now you'll get an OpenThread command line shell.
 
-* For technical queries, go to the [esp32.com](https://esp32.com/) forum
-* For a feature request or bug report, create a [GitHub issue](https://github.com/espressif/esp-idf/issues)
+### Example Output
 
-We will get back to you as soon as possible.
+The `help` command will print all of the supported commands.
+```bash
+>  help
+I(7058) OPENTHREAD:[INFO]-CLI-----: execute command: help
+bbr
+bufferinfo
+ccathreshold
+channel
+child
+childip
+childmax
+childsupervision
+childtimeout
+coap
+contextreusedelay
+counters
+dataset
+delaytimermin
+diag
+discover
+dns
+domainname
+eidcache
+eui64
+extaddr
+extpanid
+factoryreset
+...
+```
+
+## Set Up Network
+
+To run this example, at least two ESP32-H2 boards flashed with this ot_cli example are required.
+
+On the first device, run the following commands:
+```bash
+> factoryreset
+... # the device will reboot
+
+> dataset init new
+Done
+> dataset commit active
+Done
+> ifconfig up
+Done
+> thread start
+Done
+
+# After some seconds
+
+> state
+leader
+Done
+```
+Now the first device has formed a Thread network as a leader. Get some information which will be used in next steps:
+```bash
+> ipaddr
+fdde:ad00:beef:0:0:ff:fe00:fc00
+fdde:ad00:beef:0:0:ff:fe00:8000
+fdde:ad00:beef:0:a7c6:6311:9c8c:271b
+fe80:0:0:0:5c27:a723:7115:c8f8
+
+# Get the Active Dataset
+> dataset active -x
+0e080000000000010000000300001835060004001fffe00208fe7bb701f5f1125d0708fd75cbde7c6647bd0510b3914792d44f45b6c7d76eb9306eec94030f4f70656e5468726561642d35383332010258320410e35c581af5029b054fc904a24c2b27700c0402a0fff8
+```
+
+On the second device, set the active dataset from leader, and start Thread interface:
+```bash
+> factoryreset
+... # the device will reboot
+
+> dataset set active 0e080000000000010000000300001835060004001fffe00208fe7bb701f5f1125d0708fd75cbde7c6647bd0510b3914792d44f45b6c7d76eb9306eec94030f4f70656e5468726561642d35383332010258320410e35c581af5029b054fc904a24c2b27700c0402a0fff8
+> ifconfig up
+Done
+> thread start
+Done
+
+# After some seconds
+
+> state
+router  # child is also a valid state
+Done
+```
+The second device has joined the Thread network as a router (or a child).
+
+## Extension commands
+
+You can refer to the [extension command](https://github.com/espressif/esp-thread-br/blob/main/components/esp_ot_cli_extension/README.md) about the extension commands.
+
+The following examples are supported by `ot_cli`:
+
+* TCP and UDP Example
+* Iperf Example
+

@@ -6,6 +6,13 @@
 static uint32_t system_uptime = 0;
 static float simulated_cpu_temp = 25.0f;
 
+// --- [CHECKSUM UTILITY] ---
+static uint8_t calc_checksum(const uint8_t *data, uint8_t len) {
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < len; i++) sum += data[i];
+    return sum;
+}
+
 HAL_StatusTypeDef Thread_SPI_SendSystemInfo(SPI_HandleTypeDef *hspi) {
     char system_info[32];
     sprintf(system_info, "STM32H743_%lu", system_uptime);
@@ -40,22 +47,40 @@ HAL_StatusTypeDef Thread_SPI_SendPacket(SPI_HandleTypeDef *hspi, uint8_t cmd, co
     offset += sprintf(hex_str + offset, "\r\n");
     UART_Send_String(hex_str);
 
-    return HAL_SPI_Transmit(hspi, (uint8_t*)&packet, 3 + len, 1000);
+    // 항상 40바이트로 패딩해서 송신
+    uint8_t txbuf[40] = {0};
+    memcpy(txbuf, &packet, 3 + len);
+    // 체크섬 추가
+    uint8_t checksum = calc_checksum(txbuf, 3 + len);
+    txbuf[3 + len] = checksum;
+    // 총 전송 길이: 4 + len (헤더+커맨드+길이+데이터+체크섬), 나머지는 0으로 패딩
+    return HAL_SPI_Transmit(hspi, txbuf, 40, 1000);
 }
 
 HAL_StatusTypeDef Thread_SPI_ReceivePacket(SPI_HandleTypeDef *hspi, Thread_SPI_Packet_t* packet) {
     if (packet == NULL) return HAL_ERROR;
 
-    // 패킷 수신 (헤더 + 명령어 + 길이 + 데이터)
+    // 헤더+커맨드+길이
     HAL_StatusTypeDef status = HAL_SPI_Receive(hspi, (uint8_t*)packet, 3, 1000);
     if (status != HAL_OK) return status;
 
-    // 헤더 검증
     if (packet->header != THREAD_SPI_HEADER) return HAL_ERROR;
 
-    // 데이터가 있으면 추가 수신
+    // 데이터+체크섬까지 한 번에 수신
+    uint8_t rxbuf[33] = {0}; // 최대 데이터 32 + 체크섬 1
     if (packet->length > 0 && packet->length <= 32) {
-        status = HAL_SPI_Receive(hspi, packet->data, packet->length, 1000);
+        status = HAL_SPI_Receive(hspi, rxbuf, packet->length + 1, 1000);
+        if (status != HAL_OK) return status;
+        memcpy(packet->data, rxbuf, packet->length);
+        uint8_t checksum = rxbuf[packet->length];
+
+        // 체크섬 검증
+        uint8_t sum = 0;
+        sum += packet->header;
+        sum += packet->command;
+        sum += packet->length;
+        for (int i = 0; i < packet->length; i++) sum += packet->data[i];
+        if ((sum & 0xFF) != checksum) return HAL_ERROR;
     }
 
     return status;

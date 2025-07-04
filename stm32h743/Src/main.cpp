@@ -216,25 +216,33 @@ int main(void)
 		char test_data[32];
 		snprintf(test_data, sizeof(test_data), "Hello Thread! Cnt=%lu", test_counter++);
 
-		// CS LOW (SPI 활성화)
+		// 송신 (Hello Thread!)
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
-
-		// SPI로 ESP32C6에 데이터 전송
+		HAL_Delay(2);
 		Thread_SPI_SendPacket(&hspi3, THREAD_SPI_CMD_SEND, (uint8_t*)test_data, strlen(test_data));
-
-		// CS HIGH (SPI 비활성화)
+		HAL_Delay(2);
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 
-		// UART로도 전송 내용 출력
 		UART_Send_String("Sent to ESP: ");
 		UART_Send_String(test_data);
 		UART_Send_String("\r\n");
+
+		// 수신: 한 번만 ReceivePacket
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
+		HAL_Delay(2);
+		Thread_SPI_Packet_t rx_packet;
+		if (Thread_SPI_ReceivePacket(&hspi3, &rx_packet) == HAL_OK) {
+			// 필요시 OK 등 수신 데이터 출력 가능
+		}
+		HAL_Delay(2);
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 
 		if(uart1_rx_flag){
 			uart1_rx_flag = 0;
 			sprintf((char *)&text, "Uart1 Rx : %c\r\n", uart1_rx_data);
 			UART_Send_String((char *)text);
 		}
+		HAL_Delay(2000);
 
 		// Send the data to mmWave Radar via UART2
 		#ifdef USE_UART2
