@@ -3,7 +3,7 @@
 
 #include "stm32h7xx_hal.h"
 
-#define THREAD_SPI_HEADER        0x80
+#define THREAD_SPI_HEADER        0xA5
 #define THREAD_SPI_CMD_SEND      0x01
 #define THREAD_SPI_CMD_RECEIVE   0x02
 #define THREAD_SPI_CMD_PING      0x03

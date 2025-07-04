@@ -27,6 +27,19 @@ HAL_StatusTypeDef Thread_SPI_SendPacket(SPI_HandleTypeDef *hspi, uint8_t cmd, co
         memcpy(packet.data, data, len);
     }
 
+    // 패킷 내용 UART로 출력 (hex dump)
+    char hex_str[128] = {0};
+    int offset = 0;
+    offset += sprintf(hex_str + offset, "TX Packet: ");
+    offset += sprintf(hex_str + offset, "%02X ", packet.header);
+    offset += sprintf(hex_str + offset, "%02X ", packet.command);
+    offset += sprintf(hex_str + offset, "%02X ", packet.length);
+    for (int i = 0; i < len; i++) {
+        offset += sprintf(hex_str + offset, "%02X ", packet.data[i]);
+    }
+    offset += sprintf(hex_str + offset, "\r\n");
+    UART_Send_String(hex_str);
+
     return HAL_SPI_Transmit(hspi, (uint8_t*)&packet, 3 + len, 1000);
 }
 

@@ -2,6 +2,13 @@
 datasheet/
 stm_compare/
 .metadata/
+esp32c6/Thread_Slave/.devcontainer
+
+# ESP32 specific files
+*.clangd
+.devcontainer/
+sdkconfig.old
+sdkconfig.ci
 
 # STM32 Build outputs
 Debug/
@@ -27,6 +34,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+.settings/
 
 # Logs
 *.log
@@ -67,3 +75,19 @@ out/
 # Temporary files
 *.tmp
 *.temp
+
+# CMake build directories
+cmake-build-*/
+build-*/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# ESP-IDF specific
+managed_components/
+dependencies.lock

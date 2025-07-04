@@ -155,6 +155,9 @@ void LED_Blink(uint32_t Hdelay, uint32_t Ldelay)
 }
 /* USER CODE END 0 */
 
+// Ping-Pong 테스트 루프 함수 분리
+void PingPongTestLoop(void);
+
 /**
  * @brief  The application entry point.
  * @retval int
@@ -170,6 +173,15 @@ int main(void)
 	MX_GPIO_Init();
 	MX_DMA_Init();
 	MX_SPI4_Init();
+	MX_SPI3_Init();
+
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+	GPIO_InitStruct.Pin = GPIO_PIN_15;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
 	MX_TIM1_Init();
 	UART_Init();
 	/* USER CODE BEGIN 2 */
@@ -186,11 +198,13 @@ int main(void)
 	UART_Send_String("Thread IoT SPI Bidirectional Test Started!\r\n");
 
 	ST7735_LCD_Driver.FillRect(&st7735_pObj, 0, 0, ST7735Ctx.Width, ST7735Ctx.Height, BLACK);
-	LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"SPI Bidirectional");
+	// LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"SPI Bidirectional");
 
 	auto clearLine = [](uint16_t y, uint16_t height = 16) {
 		ST7735_LCD_Driver.FillRect(&st7735_pObj, 0, y, ST7735Ctx.Width, height, BLACK);
 	};
+
+	// PingPongTestLoop(); // 필요할 때만 호출
 	#ifdef USE_UART2
 	uint8_t data[7] = {0x55, 0x06, 0x00, 0x02, 0x05, 0x0D, 0x01};
 	makechecksum(data, 7); // Create checksum for the data
@@ -198,49 +212,24 @@ int main(void)
 
 	while (1)
 	{
-		Thread_SPI_UpdateUptime();
+		LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"Running...");
+		// 테스트용 데이터 생성 (카운터 포함)
+		char test_data[32];
+		snprintf(test_data, sizeof(test_data), "Hello Thread! Cnt=%lu", test_counter++);
 
-		// Send System Info, Status, Ping
-		HAL_StatusTypeDef send_result = Thread_SPI_SendSystemInfo(&hspi4);
-		HAL_StatusTypeDef status_result = Thread_SPI_SendStatus(&hspi4);
-		HAL_StatusTypeDef ping_result = Thread_SPI_SendPing(&hspi4);
+		// CS LOW (SPI 활성화)
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
 
-		// Receive Data From ESP32C6
-		HAL_StatusTypeDef receive_result = Thread_SPI_ReceivePacket(&hspi4, &received_packet);
+		// SPI로 ESP32C6에 데이터 전송
+		Thread_SPI_SendPacket(&hspi3, THREAD_SPI_CMD_SEND, (uint8_t*)test_data, strlen(test_data));
 
-		// Send OK
-		clearLine(20);
-		LCD_ShowString(0, 20, ST7735Ctx.Width, 16, 16, (uint8_t*)"Send OK!");
-		HAL_Delay(2000);
+		// CS HIGH (SPI 비활성화)
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 
-		// Check Send Result
-		char status_str[64];
-		if (send_result == HAL_OK && status_result == HAL_OK && ping_result == HAL_OK) {
-			sprintf(status_str, "TX: OK, RX: %s", (receive_result == HAL_OK) ? "OK" : "NO DATA");
-			clearLine(20);
-			LCD_ShowString(0, 20, ST7735Ctx.Width, 16, 16, (uint8_t*)status_str);
-			UART_Send_String("SPI bidirectional test OK\r\n");
-		} else {
-			sprintf(status_str, "TX: FAIL, RX: %s", (receive_result == HAL_OK) ? "OK" : "NO DATA");
-			clearLine(20);
-			LCD_ShowString(0, 20, ST7735Ctx.Width, 16, 16, (uint8_t*)status_str);
-			//UART_Send_String("SPI bidirectional test FAIL\r\n");
-		}
-
-		// Process Received Data
-		if (receive_result == HAL_OK) {
-			Thread_SPI_ProcessReceivedData(&received_packet);
-			clearLine(40);
-			LCD_ShowString(0, 40, ST7735Ctx.Width, 16, 16, (uint8_t*)"Data Received!");
-		} else {
-			clearLine(40);
-			LCD_ShowString(0, 40, ST7735Ctx.Width, 16, 16, (uint8_t*)"Waiting for slave...");
-		}
-
-		// Show Test Counter
-		char counter_str[32];
-		sprintf(counter_str, "Test #%lu", ++test_counter);
-		LCD_ShowString(0, 60, ST7735Ctx.Width, 16, 16, (uint8_t*)counter_str);
+		// UART로도 전송 내용 출력
+		UART_Send_String("Sent to ESP: ");
+		UART_Send_String(test_data);
+		UART_Send_String("\r\n");
 
 		if(uart1_rx_flag){
 			uart1_rx_flag = 0;
@@ -292,8 +281,7 @@ void SystemClock_Config(void)
 
 	/** Supply configuration update enable
 	 */
-	HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
-	/** Configure the main internal regulator output voltage
+	HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY); 	/** Configure the main internal regulator output voltage
 	 */
 	__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
 
@@ -309,7 +297,7 @@ void SystemClock_Config(void)
 	RCC_OscInitStruct.PLL.PLLM = 5;
 	RCC_OscInitStruct.PLL.PLLN = 96;
 	RCC_OscInitStruct.PLL.PLLP = 2;
-	RCC_OscInitStruct.PLL.PLLQ = 2;
+	RCC_OscInitStruct.PLL.PLLQ = 4;
 	RCC_OscInitStruct.PLL.PLLR = 2;
 	RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_2;
 	RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
@@ -376,3 +364,43 @@ void assert_failed(uint8_t *file, uint32_t line)
 #endif /* USE_FULL_ASSERT */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+
+void PingPongTestLoop(void)
+{
+	while (1)
+	{
+		Thread_SPI_UpdateUptime();
+
+		// Ping
+		LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"Ping Testing...");
+		UART_Send_String("--- Starting SPI transaction ---\r\n");
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
+		UART_Send_String("Sending PING data...\r\n");
+		HAL_StatusTypeDef ping3_result = Thread_SPI_SendPing(&hspi3);
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+		UART_Send_String("--- SPI transaction completed ---\r\n");
+
+		if (ping3_result == HAL_OK) {
+			UART_Send_String("SPI3: Ping sent, check ESP32C6 for Pong!\r\n");
+		} else {
+			UART_Send_String("SPI3: Ping failed!\r\n");
+		}
+		HAL_Delay(100);
+
+		// Pong
+		LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"Pong Testing...");
+		Thread_SPI_Packet_t rx_packet;
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
+		HAL_StatusTypeDef pong_result = Thread_SPI_ReceivePacket(&hspi3, &rx_packet);
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+
+		if (pong_result == HAL_OK && rx_packet.header == 0xA5 && rx_packet.command == 0x04 && rx_packet.length == 0) {
+			char buf[64];
+			snprintf(buf, sizeof(buf), "SPI3: PONG received! 0x%02X 0x%02X 0x%02X\r\n", rx_packet.header, rx_packet.command, rx_packet.length);
+			UART_Send_String(buf);
+		} else {
+			UART_Send_String("SPI3: Pong receive failed or invalid packet!\r\n");
+		}
+		HAL_Delay(2000);
+	}
+}
