@@ -153,13 +153,7 @@ void makechecksum(uint8_t* data, uint8_t length) {
     }
     // Calculate checksum
     uint16_t crc_data = CalculateCrc16(datas, length);
-    
-#ifdef RADAR_DEBUG_MODE
-    char buff[42]; // 32 + 10 extra bytes for safety
-    sprintf(buff, "The CRC16 value is : %04x \r\n", crc_data);
-    UART_Send_String(buff);
-#endif
-    
+    // Append checksum to the end of the data    
     datas[length] = (uint8_t)((crc_data & 0xff00) >> 8); // High byte
     datas[length + 1] = (uint8_t)(crc_data & 0x00ff); // Low byte
     

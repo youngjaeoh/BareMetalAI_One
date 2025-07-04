@@ -19,7 +19,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "dcmi.h"
 #include "dma.h"
 #include "i2c.h"
 #include "spi.h"
@@ -252,9 +251,12 @@ int main(void)
 		#endif
 
 		HAL_Delay(100);
-		// Enhanced Buzzer Test - Test every 100 iterations
+		// Enhanced Buzzer Test - Test every 10 iterations
 		#ifdef USE_BUZZER
-		if (test_counter % 100 == 0) {
+		if (test_counter % 10 == 0) {
+			UART_Send_String("=== Buzzer Test Started! ===\r\n");
+			HAL_Delay(100);
+			
 			// Test sequence: Short beep, pause, longer beep, pause, triple beep
 			Buzzer_Test(500);   // 500ms beep
 			HAL_Delay(300);     // 300ms pause
