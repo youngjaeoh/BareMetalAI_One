@@ -76,6 +76,12 @@ void Error_Handler(void);
 #define USART2_TX_Port  GPIOA
 #define USART2_RX_Pin GPIO_PIN_3
 #define USART2_RX_Port GPIOA
+#define USART3_TX_Pin GPIO_PIN_8
+#define USART3_TX_Port GPIOD
+#define USART3_RX_Pin GPIO_PIN_9
+#define USART3_RX_Port GPIOD
+#define BUZZER_GPIO_Pin GPIO_PIN_5
+#define BUZZER_GPIO_Port GPIOE
 
 /* USER CODE END Private defines */
 

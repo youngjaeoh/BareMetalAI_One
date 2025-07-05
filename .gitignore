@@ -25,6 +25,9 @@ Release/
 *.exe
 *.cyclo
 
+# STM32 Debug files
+**/stm32h743 Debug.launch
+
 # Common files to ignore
 .DS_Store
 Thumbs.db
@@ -34,7 +37,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
-.settings/
+**/.settings/
 
 # Logs
 *.log

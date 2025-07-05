@@ -253,6 +253,20 @@ void USART2_IRQHandler(void)
 }
 #endif
 
+#ifdef USE_UART3
+extern UART_HandleTypeDef huart3;
+void USART3_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART3_IRQn 0 */
+
+  /* USER CODE END USART3_IRQn 0 */
+  HAL_UART_IRQHandler(&huart3);
+  /* USER CODE BEGIN USART3_IRQn 1 */
+
+  /* USER CODE END USART3_IRQn 1 */
+}
+#endif
+
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */

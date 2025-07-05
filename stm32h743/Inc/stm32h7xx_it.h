@@ -57,12 +57,14 @@ void DebugMon_Handler(void);
 void PendSV_Handler(void);
 void SysTick_Handler(void);
 void DMA_STR0_IRQHandler(void);
-void DCMI_IRQHandler(void);
 void TIM16_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 void USART1_IRQHandler(void);
 #ifdef USE_UART2
 void USART2_IRQHandler(void);
+#endif
+#ifdef USE_UART3
+void USART3_IRQHandler(void);
 #endif
 /* USER CODE END EFP */
 

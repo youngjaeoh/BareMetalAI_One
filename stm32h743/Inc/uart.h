@@ -11,6 +11,8 @@ extern "C"{
 /* UART Configuration Defines -----------------------------------------------*/
 // UART2를 사용하려면 아래 주석을 해제하세요
 // #define USE_UART2
+// UART3를 사용하려면 아래 주석을 해제하세요
+// #define USE_UART3
 
 /* Private function prototypes -----------------------------------------------*/
 #define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
@@ -30,6 +32,17 @@ extern void UART2_Init(void);
 extern void UART2_Send_Data(uint8_t* data, uint8_t length);
 extern HAL_StatusTypeDef UART2_Send_Data_WithStatus(uint8_t* data, uint8_t length);
 extern void USART2_Rx_ISR(UART_HandleTypeDef* huart);
+#endif
+
+/* UART3 related declarations - only if USE_UART3 is defined */
+#ifdef USE_UART3
+extern volatile int uart3_rx_flag;
+extern volatile char uart3_rx_data;
+extern UART_HandleTypeDef huart3;
+extern void UART3_Init(void);
+extern void UART3_Send_Data(uint8_t* data, uint8_t length);
+extern HAL_StatusTypeDef UART3_Send_Data_WithStatus(uint8_t* data, uint8_t length);
+extern void USART3_Rx_ISR(UART_HandleTypeDef* huart);
 #endif
 
 /* Common UART functions */

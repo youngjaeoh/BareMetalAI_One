@@ -37,6 +37,7 @@
 #include "queue.h"
 #include "buzzer.h"
 #include "sleepbreathing.h"
+#include "data_trans_receive.h"
 
 /* USER CODE END Includes */
 
@@ -191,13 +192,22 @@ int main(void)
 	//queue_init(&uart1_rx_queue);
 	queue_init(&uart2_rx_queue);
 
+	#ifdef USE_UART3
+	// Initialize Data Transmission/Reception module
+	DataTransReceive_Init(BOARD_A);  // Change to BOARD_B for slave board
+	//DataTransReceive_Init(BOARD_B);  // Change to BOARD_B for slave board
+	
+	// Test mode selection
+	uint8_t test_mode = 1; // 0: Ping-Pong test, 1: Flag-based data transmission
+	uint32_t mode_switch_time = HAL_GetTick();
+	#endif
+
 	uint32_t test_counter = 0;
 	Thread_SPI_Packet_t received_packet;
 
 	UART_Send_String("Thread IoT SPI Bidirectional Test Started!\r\n");
 
 	ST7735_LCD_Driver.FillRect(&st7735_pObj, 0, 0, ST7735Ctx.Width, ST7735Ctx.Height, BLACK);
-	// LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"SPI Bidirectional");
 
 	auto clearLine = [](uint16_t y, uint16_t height = 16) {
 		ST7735_LCD_Driver.FillRect(&st7735_pObj, 0, y, ST7735Ctx.Width, height, BLACK);
@@ -213,6 +223,38 @@ int main(void)
 	{
 		LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"Running...");
 		// 테스트용 데이터 생성 (카운터 포함)
+		#ifdef USE_UART3	
+		// Run different test modes
+		static uint32_t last_mode_debug = 0;
+		if (HAL_GetTick() - last_mode_debug >= 3000) { // Every 3 seconds
+			char mode_msg[50];
+			sprintf(mode_msg, "Current Mode: %d (0=Ping, 1=Flag)\r\n", test_mode);
+			UART_Send_String(mode_msg);
+			last_mode_debug = HAL_GetTick();
+		}
+		
+		if (test_mode == 0) {
+			// Ping-Pong Test Mode
+			DataTransReceive_PingPongTest();
+		} else {
+			// Flag-based Data Transmission Mode
+			DataTransReceive_MainProcess();
+			
+			// Board A: Send flag every 10 seconds
+			if (current_board_mode == BOARD_A) {
+				static uint32_t last_flag_time = 0;
+				if (HAL_GetTick() - last_flag_time >= 10000) {
+					DataTransReceive_SendFlag(1); // Send flag = 1
+					last_flag_time = HAL_GetTick();
+				}
+			}
+			
+			// Process accumulated data
+			DataTransReceive_ProcessData();
+		}
+		#endif
+		
+		// 기존 Thread SPI 테스트 코드 (간소화)
 		char test_data[32];
 		snprintf(test_data, sizeof(test_data), "Hello Thread! Cnt=%lu", test_counter++);
 
@@ -242,7 +284,7 @@ int main(void)
 			sprintf((char *)&text, "Uart1 Rx : %c\r\n", uart1_rx_data);
 			UART_Send_String((char *)text);
 		}
-		HAL_Delay(2000);
+		HAL_Delay(100);
 
 		// Send the data to mmWave Radar via UART2
 		#ifdef USE_UART2
