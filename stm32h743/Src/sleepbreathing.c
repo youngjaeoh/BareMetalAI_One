@@ -113,7 +113,7 @@ void radar_data_process(CircularQueue *queue) {
         //second check for queue size
         //sprintf(queue_size_str, "** Queue Size : %d **\r\n", queue_size(queue));
         //UART_Send_String(queue_size_str);
-        if(pContext.currentMsg[2] == SLEEP_INF){
+        if(pContext.currentMsg[2] == SLEEP_INF || pContext.currentMsg[2] == 0x03){
 #ifdef RADAR_DEBUG_MODE
             ShowData(pContext.currentMsg);
 #endif
@@ -133,22 +133,22 @@ void ShowData(const uint8_t inf[]){
 }
 
 // Function to calculate CRC16 checksum
-uint16_t CalculateCrc16(unsigned char *lpuc_Frame, unsigned short int lus_Len){
-  unsigned char luc_CRCHi = 0xFF;
-  unsigned char luc_CRCLo = 0xFF;
+uint16_t CalculateCrc16(uint8_t *lpuc_Frame, uint16_t lus_Len){
+  uint8_t luc_CRCHi = 0xFF;
+  uint8_t luc_CRCLo = 0xFF;
   int li_Index=0;
   while(lus_Len--){
     li_Index = luc_CRCLo ^ *( lpuc_Frame++);
-    luc_CRCLo = (unsigned char)( luc_CRCHi ^ cuc_CRCHi[li_Index]);
+    luc_CRCLo = (uint8_t)( luc_CRCHi ^ cuc_CRCHi[li_Index]);
     luc_CRCHi = cuc_CRCLo[li_Index];
   }
-  return (unsigned short int )(luc_CRCLo << 8 | luc_CRCHi);
+  return (uint16_t)(luc_CRCLo << 8 | luc_CRCHi);
 }
 
 // Function to create a checksum for the data and send to radar
-void makechecksum(uint8_t* data, uint8_t length) {
+void makechecksum(uint8_t* data, uint16_t length) {
     uint8_t datas[length + 2];
-    for(int i = 0; i < length; i++) {
+    for(uint16_t i = 0; i < length; i++) {
         datas[i] = data[i];
     }
     // Calculate checksum
@@ -159,7 +159,7 @@ void makechecksum(uint8_t* data, uint8_t length) {
     
 #ifdef RADAR_DEBUG_MODE
     UART_Send_String("The datas send to the radar : ");
-    for(int i = 0; i < length + 2; i++) {
+    for(uint16_t i = 0; i < length + 2; i++) {
         char buffsend[8];
         sprintf(buffsend, "0x%02X ", datas[i]);
         UART_Send_String(buffsend);
@@ -172,7 +172,7 @@ void makechecksum(uint8_t* data, uint8_t length) {
 }
 
 // Function to send data to mmWave Radar via UART2
-void send_to_radar(uint8_t* data, uint8_t length) {
+void send_to_radar(uint8_t* data, uint16_t length) {
     // Send data via UART2 to mmWave Radar using uart.c function
 #ifdef RADAR_DEBUG_MODE
     HAL_StatusTypeDef status = UART2_Send_Data_WithStatus(data, length);

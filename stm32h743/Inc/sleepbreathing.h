@@ -21,7 +21,8 @@ extern "C" {
 // There is a global uart buffer typed as queue in main.c
 // Need to process the data in the queue
 void radar_data_process(CircularQueue *queue);
-void makechecksum(uint8_t* data, uint8_t length);
+void makechecksum(uint8_t* data, uint16_t length);
+void send_to_radar(uint8_t* data, uint16_t length);
 
 #ifdef __cplusplus
 }
