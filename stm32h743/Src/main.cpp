@@ -175,6 +175,7 @@ int main(void)
 	MX_SPI4_Init();
 	MX_SPI3_Init();
 
+	// 이걸 왜 하는 지 모르겠어.
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
 	GPIO_InitStruct.Pin = GPIO_PIN_15;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
