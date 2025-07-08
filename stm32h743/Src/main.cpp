@@ -49,6 +49,14 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+// IoT 명령 상수들
+#define IOT_CMD_LIGHT_ON     "light on"
+#define IOT_CMD_LIGHT_OFF    "light off"
+#define IOT_CMD_AC_ON        "airconditioner on"
+#define IOT_CMD_AC_OFF       "airconditioner off"
+#define IOT_CMD_ALL_ON       "all on"
+#define IOT_CMD_ALL_OFF      "all off"
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -78,6 +86,9 @@ void SystemClock_Config(void);
 #define FrameWidth 128
 #define FrameHeight 160
 #endif
+
+// IoT 제어 함수들
+void IoT_SendCommand(const char* command);
 
 /* USER CODE END PFP */
 
@@ -254,45 +265,11 @@ int main(void)
 		}
 		#endif
 		
-		// IoT 제어 명령 전송
-		char test_data[32];
-		static uint8_t light_state = 0;
-		
-		// 5초마다 light on/off 토글
-		if (test_counter % 50 == 0) { // 5초마다 (100ms * 50 = 5000ms)
-			if (light_state) {
-				snprintf(test_data, sizeof(test_data), "light off");
-				light_state = 0;
-			} else {
-				snprintf(test_data, sizeof(test_data), "light on");
-				light_state = 1;
-			}
-		} else {
-			snprintf(test_data, sizeof(test_data), "Hello Thread! Cnt=%lu", test_counter);
-		}
-
-		// 송신 (IoT 명령)
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
-		HAL_Delay(2);
-		Thread_SPI_SendPacket(&hspi3, THREAD_SPI_CMD_SEND, (uint8_t*)test_data, strlen(test_data));
-		HAL_Delay(2);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
-
-		UART_Send_String("Sent to ESP: ");
-		UART_Send_String(test_data);
-		UART_Send_String("\r\n");
-
-		HAL_Delay(3000);
-
-		// 수신: 한 번만 ReceivePacket
-		// HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
-		// HAL_Delay(2);
-		// Thread_SPI_Packet_t rx_packet;
-		// if (Thread_SPI_ReceivePacket(&hspi3, &rx_packet) == HAL_OK) {
-		// 	// 필요시 OK 등 수신 데이터 출력 가능
-		// }
-		// HAL_Delay(2);
-		// HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+		// IoT 제어 명령 전송 (조명 껐다 켰다 테스트)
+		IoT_SendCommand(IOT_CMD_LIGHT_ON);
+		HAL_Delay(2000);
+		IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+		HAL_Delay(2000);
 
 		if(uart1_rx_flag){
 			uart1_rx_flag = 0;
@@ -333,6 +310,8 @@ int main(void)
 			}
 		}
 		#endif
+
+		test_counter++;
 	}
 	/* USER CODE END 2 */
 }
@@ -470,4 +449,20 @@ void PingPongTestLoop(void)
 		}
 		HAL_Delay(2000);
 	}
+}
+
+// IoT 제어 함수들 구현
+void IoT_SendCommand(const char* command)
+{
+	// 송신 (IoT 명령)
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
+	HAL_Delay(2);
+	Thread_SPI_SendPacket(&hspi3, THREAD_SPI_CMD_SEND, (uint8_t*)command, strlen(command));
+	HAL_Delay(2);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+
+	UART_Send_String((char*)command);
+	UART_Send_String((char*)"\r\n");
+
+	HAL_Delay(3000);
 }
