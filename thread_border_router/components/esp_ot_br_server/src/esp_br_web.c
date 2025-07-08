@@ -255,6 +255,8 @@ static esp_err_t esp_otbr_ac_status_get_handler(httpd_req_t *req);
 static esp_err_t esp_otbr_ac_control_post_handler(httpd_req_t *req);
 static esp_err_t esp_otbr_tv_status_get_handler(httpd_req_t *req);
 static esp_err_t esp_otbr_tv_control_post_handler(httpd_req_t *req);
+static esp_err_t esp_otbr_speaker_status_get_handler(httpd_req_t *req);
+static esp_err_t esp_otbr_speaker_control_post_handler(httpd_req_t *req);
 
 static httpd_uri_t s_web_gui_handlers[] = {
     {
@@ -345,6 +347,18 @@ static httpd_uri_t s_web_gui_handlers[] = {
         .uri = ESP_OT_REST_API_TV_CONTROL_PATH,
         .method = HTTP_POST,
         .handler = esp_otbr_tv_control_post_handler,
+        .user_ctx = &s_server.data,
+    },
+    {
+        .uri = ESP_OT_REST_API_SPEAKER_STATUS_PATH,
+        .method = HTTP_GET,
+        .handler = esp_otbr_speaker_status_get_handler,
+        .user_ctx = NULL,
+    },
+    {
+        .uri = ESP_OT_REST_API_SPEAKER_CONTROL_PATH,
+        .method = HTTP_POST,
+        .handler = esp_otbr_speaker_control_post_handler,
         .user_ctx = &s_server.data,
     },
 };
@@ -1174,6 +1188,8 @@ static esp_err_t default_urls_get_handler(httpd_req_t *req)
         return index_html_get_handler(req, info.file_path);
     } else if (strcmp(info.file_name, "/tv.html") == 0) {
         return index_html_get_handler(req, info.file_path);
+    } else if (strcmp(info.file_name, "/speaker.html") == 0) {
+        return index_html_get_handler(req, info.file_path);
     } else if (strcmp(info.file_name, "/static/style.css") == 0) {
         return style_css_get_handler(req, info.file_path);
     } else if (strcmp(info.file_name, "/static/restful.js") == 0) {
@@ -1387,6 +1403,33 @@ static esp_err_t esp_otbr_tv_control_post_handler(httpd_req_t *req)
         ret = httpd_send_plain_text(req, "TV control successful");
     } else {
         ret = httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "TV control failed");
+    }
+    return ret;
+}
+
+static esp_err_t esp_otbr_speaker_status_get_handler(httpd_req_t *req)
+{
+    ESP_RETURN_ON_FALSE(req, ESP_FAIL, WEB_TAG, "Failed to parse the speaker status request");
+    esp_err_t ret = ESP_OK;
+    cJSON *response = handle_ot_resource_speaker_status_request();
+    ESP_RETURN_ON_FALSE(response, ESP_FAIL, WEB_TAG, "Failed to get speaker status");
+    ret = httpd_send_packet(req, response);
+    cJSON_Delete(response);
+    return ret;
+}
+
+static esp_err_t esp_otbr_speaker_control_post_handler(httpd_req_t *req)
+{
+    ESP_RETURN_ON_FALSE(req, ESP_FAIL, WEB_TAG, "Failed to parse the speaker control request");
+    esp_err_t ret = ESP_OK;
+    cJSON *request = httpd_request_convert2_json(req, cJSON_Object);
+    ESP_RETURN_ON_FALSE(request, ESP_FAIL, WEB_TAG, "Failed to parse speaker control request");
+    otError error = handle_ot_resource_speaker_control_request(request);
+    cJSON_Delete(request);
+    if (error == OT_ERROR_NONE) {
+        ret = httpd_send_plain_text(req, "Speaker control successful");
+    } else {
+        ret = httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Speaker control failed");
     }
     return ret;
 }

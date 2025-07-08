@@ -60,6 +60,7 @@ static otSockAddr s_sock_addr;
 extern void update_light_status(bool status);
 extern void update_ac_status(bool status);
 extern void update_tv_status(bool status);
+extern void update_speaker_status(bool status);
 
 static void udp_receive_handler(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
 {
@@ -91,6 +92,12 @@ static void udp_receive_handler(void *aContext, otMessage *aMessage, const otMes
         } else if (strstr(message, "tv_off") != NULL) {
             ESP_LOGI(TAG, ">>> update_tv_status(false) 호출");
             update_tv_status(false);
+        } else if (strstr(message, "speaker_on") != NULL) {
+            ESP_LOGI(TAG, ">>> update_speaker_status(true) 호출");
+            update_speaker_status(true);
+        } else if (strstr(message, "speaker_off") != NULL) {
+            ESP_LOGI(TAG, ">>> update_speaker_status(false) 호출");
+            update_speaker_status(false);
         }
     }
 }

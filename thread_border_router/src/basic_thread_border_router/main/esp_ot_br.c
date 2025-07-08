@@ -43,6 +43,7 @@ extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
 bool g_light_status = false;
 bool g_ac_status = false;
 bool g_tv_status = false;
+bool g_speaker_status = false;
 
 void update_light_status(bool on) {
     g_light_status = on;
@@ -71,6 +72,15 @@ bool get_tv_status(void) {
     return g_tv_status;
 }
 
+void update_speaker_status(bool on) {
+    g_speaker_status = on;
+    ESP_LOGI("SPEAKER", "[update_speaker_status] Speaker status updated: %s", on ? "ON" : "OFF");
+}
+
+bool get_speaker_status(void) {
+    return g_speaker_status;
+}
+
 // CLI 명령 처리 태스크
 static void cli_command_task(void *pvParameters)
 {
@@ -94,7 +104,9 @@ static void cli_command_task(void *pvParameters)
                     strstr(command_buffer, "ac_on") != NULL ||
                     strstr(command_buffer, "ac_off") != NULL ||
                     strstr(command_buffer, "tv_on") != NULL ||
-                    strstr(command_buffer, "tv_off") != NULL) {
+                    strstr(command_buffer, "tv_off") != NULL ||
+                    strstr(command_buffer, "speaker_on") != NULL ||
+                    strstr(command_buffer, "speaker_off") != NULL) {
                     handle_cli_command(command_buffer);
                 }
                 

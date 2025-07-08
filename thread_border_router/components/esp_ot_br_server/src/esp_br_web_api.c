@@ -49,6 +49,8 @@ extern bool g_ac_status;
 extern void update_ac_status(bool on);
 extern bool g_tv_status;
 extern void update_tv_status(bool on);
+extern bool g_speaker_status;
+extern void update_speaker_status(bool on);
 
 /*----------------------------------------------------------------------
                             tools
@@ -1111,6 +1113,45 @@ otError handle_ot_resource_tv_control_request(cJSON *request)
             } else {
                 ret = OT_ERROR_INVALID_ARGS;
                 ESP_LOGE(API_TAG, "Invalid TV action: %s", action_str);
+            }
+        } else {
+            ret = OT_ERROR_INVALID_ARGS;
+            ESP_LOGE(API_TAG, "Action field is not a string");
+        }
+    } else {
+        ret = OT_ERROR_INVALID_ARGS;
+        ESP_LOGE(API_TAG, "Request is not an object");
+    }
+    
+    return ret;
+}
+
+cJSON *handle_ot_resource_speaker_status_request(void)
+{
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddItemToObject(root, "status", cJSON_CreateBool(g_speaker_status));
+    cJSON_AddItemToObject(root, "device", cJSON_CreateString("speaker"));
+    cJSON_AddItemToObject(root, "timestamp", cJSON_CreateNumber(xTaskGetTickCount() * portTICK_PERIOD_MS / 1000));
+    return root;
+}
+
+otError handle_ot_resource_speaker_control_request(cJSON *request)
+{
+    otError ret = OT_ERROR_NONE;
+    
+    if (cJSON_IsObject(request)) {
+        cJSON *action = cJSON_GetObjectItem(request, "action");
+        if (cJSON_IsString(action)) {
+            const char *action_str = cJSON_GetStringValue(action);
+            if (strcmp(action_str, "on") == 0) {
+                g_speaker_status = true;
+                ESP_LOGI(API_TAG, "Speaker turned ON");
+            } else if (strcmp(action_str, "off") == 0) {
+                g_speaker_status = false;
+                ESP_LOGI(API_TAG, "Speaker turned OFF");
+            } else {
+                ret = OT_ERROR_INVALID_ARGS;
+                ESP_LOGE(API_TAG, "Invalid Speaker action: %s", action_str);
             }
         } else {
             ret = OT_ERROR_INVALID_ARGS;

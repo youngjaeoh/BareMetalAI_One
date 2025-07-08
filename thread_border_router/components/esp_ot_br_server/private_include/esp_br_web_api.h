@@ -54,6 +54,8 @@ extern "C" {
 #define ESP_OT_REST_API_AC_CONTROL_PATH "/ac/control"
 #define ESP_OT_REST_API_TV_STATUS_PATH "/tv/status"
 #define ESP_OT_REST_API_TV_CONTROL_PATH "/tv/control"
+#define ESP_OT_REST_API_SPEAKER_STATUS_PATH "/speaker/status"
+#define ESP_OT_REST_API_SPEAKER_CONTROL_PATH "/speaker/control"
 
 /*---------------------------------------------------------------------
                             Implement
@@ -313,6 +315,25 @@ cJSON *handle_ot_resource_tv_status_request(void);
  *      -   OT_ERROR_FAILED         :   Failed to control TV.
  */
 otError handle_ot_resource_tv_control_request(cJSON *request);
+
+/**
+ * @brief Provide an entry to get current speaker status
+ *
+ * @return The cJSON object of speaker status
+ */
+cJSON *handle_ot_resource_speaker_status_request(void);
+
+/**
+ * @brief Handle the speaker control @param request
+ *
+ * @param [in] request  A cJSON format from http request for speaker control.
+ *
+ * @return
+ *      -   OT_ERROR_NONE           :   On success.
+ *      -   OT_ERROR_INVALID_ARGS   :   The @param request is invalid.
+ *      -   OT_ERROR_FAILED         :   Failed to control speaker.
+ */
+otError handle_ot_resource_speaker_control_request(cJSON *request);
 
 #ifdef __cplusplus
 }

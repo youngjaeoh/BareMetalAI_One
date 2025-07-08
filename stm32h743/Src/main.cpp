@@ -56,6 +56,8 @@
 #define IOT_CMD_AC_OFF       "airconditioner off"
 #define IOT_CMD_TV_ON        "tv on"
 #define IOT_CMD_TV_OFF       "tv off"
+#define IOT_CMD_SPEAKER_ON   "speaker on"
+#define IOT_CMD_SPEAKER_OFF  "speaker off"
 #define IOT_CMD_ALL_ON       "all on"
 #define IOT_CMD_ALL_OFF      "all off"
 
@@ -267,7 +269,7 @@ int main(void)
 		}
 		#endif
 		
-		// IoT 제어 명령 전송 (조명, 에어컨, TV 테스트)
+		// IoT 제어 명령 전송 (조명, 에어컨, TV, 스피커 테스트)
 		IoT_SendCommand(IOT_CMD_LIGHT_ON);
 		HAL_Delay(500);
 		IoT_SendCommand(IOT_CMD_LIGHT_OFF);
@@ -279,6 +281,10 @@ int main(void)
 		IoT_SendCommand(IOT_CMD_TV_ON);
 		HAL_Delay(500);
 		IoT_SendCommand(IOT_CMD_TV_OFF);
+		HAL_Delay(500);
+		IoT_SendCommand(IOT_CMD_SPEAKER_ON);
+		HAL_Delay(500);
+		IoT_SendCommand(IOT_CMD_SPEAKER_OFF);
 		HAL_Delay(500);
 
 		if(uart1_rx_flag){

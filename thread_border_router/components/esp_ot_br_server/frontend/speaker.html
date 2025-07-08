@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>Speaker Control</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #111;
+      min-height: 100vh;
+      width: 100vw;
+      overflow-x: hidden;
+    }
+    .top-right-controls {
+      position: absolute;
+      top: 32px;
+      right: 48px;
+      z-index: 10;
+    }
+    .btn {
+      padding: 8px 16px;
+      margin: 0 4px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: bold;
+      opacity: 0.9;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-success { background: #28a745; color: white; }
+    .btn-primary { background: #007bff; color: white; }
+    .center-speaker {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100vw;
+    }
+    .speaker-svg {
+      width: 350px;
+      height: 350px;
+      cursor: pointer;
+      transition: filter 0.3s;
+      filter: drop-shadow(0 0 40px rgba(40, 167, 69, 0.2));
+    }
+    .speaker-on {
+      filter: drop-shadow(0 0 80px #28a745) drop-shadow(0 0 40px #28a745);
+    }
+    .speaker-off {
+      filter: drop-shadow(0 0 10px #222);
+    }
+    .device-label {
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 30px;
+    }
+    .status-text {
+      color: #28a745;
+      font-size: 18px;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="top-right-controls">
+    <button class="btn btn-success" onclick="controlSpeaker('on')">스피커 켜기</button>
+    <button class="btn btn-success" onclick="controlSpeaker('off')">스피커 끄기</button>
+    <button class="btn btn-primary" onclick="refreshStatus()">새로고침</button>
+  </div>
+  
+  <div class="center-speaker">
+    <svg id="speaker" class="speaker-svg speaker-off" viewBox="0 0 400 400" width="350" height="350" onclick="toggleSpeaker()">
+      <!-- 스피커 본체 -->
+      <rect x="100" y="150" width="200" height="100" fill="#333" rx="8" />
+      <!-- 스피커 그릴 -->
+      <rect x="110" y="160" width="180" height="80" fill="#555" rx="6" />
+      <!-- 스피커 구멍들 -->
+      <circle cx="130" cy="180" r="8" fill="#777" />
+      <circle cx="150" cy="180" r="8" fill="#777" />
+      <circle cx="170" cy="180" r="8" fill="#777" />
+      <circle cx="190" cy="180" r="8" fill="#777" />
+      <circle cx="210" cy="180" r="8" fill="#777" />
+      <circle cx="230" cy="180" r="8" fill="#777" />
+      <circle cx="250" cy="180" r="8" fill="#777" />
+      <circle cx="270" cy="180" r="8" fill="#777" />
+      <circle cx="130" cy="200" r="8" fill="#777" />
+      <circle cx="150" cy="200" r="8" fill="#777" />
+      <circle cx="170" cy="200" r="8" fill="#777" />
+      <circle cx="190" cy="200" r="8" fill="#777" />
+      <circle cx="210" cy="200" r="8" fill="#777" />
+      <circle cx="230" cy="200" r="8" fill="#777" />
+      <circle cx="250" cy="200" r="8" fill="#777" />
+      <circle cx="270" cy="200" r="8" fill="#777" />
+      <circle cx="130" cy="220" r="8" fill="#777" />
+      <circle cx="150" cy="220" r="8" fill="#777" />
+      <circle cx="170" cy="220" r="8" fill="#777" />
+      <circle cx="190" cy="220" r="8" fill="#777" />
+      <circle cx="210" cy="220" r="8" fill="#777" />
+      <circle cx="230" cy="220" r="8" fill="#777" />
+      <circle cx="250" cy="220" r="8" fill="#777" />
+      <circle cx="270" cy="220" r="8" fill="#777" />
+      <!-- 스피커 표시등 -->
+      <circle id="speaker-indicator" cx="320" cy="170" r="6" fill="#333" />
+      <!-- 스피커 받침대 -->
+      <rect x="180" y="260" width="40" height="20" fill="#444" rx="4" />
+      <!-- 볼륨 표시 -->
+      <text x="200" y="290" text-anchor="middle" fill="#28a745" font-size="12" font-weight="bold">VOL 50%</text>
+    </svg>
+    <div class="device-label">스피커</div>
+    <div id="status-text" class="status-text">꺼짐</div>
+  </div>
+
+  <script>
+    let speakerStatus = false;
+    let updateInterval;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      refreshStatus();
+      updateInterval = setInterval(refreshStatus, 2000);
+    });
+
+    function toggleSpeaker() {
+      controlSpeaker(!speakerStatus ? 'on' : 'off');
+    }
+
+    function controlSpeaker(action) {
+      fetch('/speaker/control', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: action})
+      })
+      .then(() => {
+        refreshStatus();
+      });
+    }
+
+    function refreshStatus() {
+      fetch('/speaker/status')
+      .then(response => response.json())
+      .then(data => {
+        speakerStatus = data.status;
+        updateSpeakerDisplay(speakerStatus);
+      });
+    }
+
+    function updateSpeakerDisplay(isOn) {
+      const speaker = document.getElementById('speaker');
+      const indicator = document.getElementById('speaker-indicator');
+      const statusText = document.getElementById('status-text');
+      
+      if (isOn) {
+        speaker.classList.remove('speaker-off');
+        speaker.classList.add('speaker-on');
+        indicator.setAttribute('fill', '#28a745');
+        statusText.textContent = '켜짐';
+        statusText.style.color = '#28a745';
+      } else {
+        speaker.classList.remove('speaker-on');
+        speaker.classList.add('speaker-off');
+        indicator.setAttribute('fill', '#333');
+        statusText.textContent = '꺼짐';
+        statusText.style.color = '#666';
+      }
+    }
+  </script>
+</body>
+</html> 

@@ -70,6 +70,21 @@ static otError esp_openthread_process_tv_off(void *aContext, uint8_t aArgsLength
     return OT_ERROR_NONE;
 }
 
+// Speaker control command handlers
+static otError esp_openthread_process_speaker_on(void *aContext, uint8_t aArgsLength, char *aArgs[])
+{
+    ESP_LOGI("CLI", "Speaker ON command received");
+    update_speaker_status(true);
+    return OT_ERROR_NONE;
+}
+
+static otError esp_openthread_process_speaker_off(void *aContext, uint8_t aArgsLength, char *aArgs[])
+{
+    ESP_LOGI("CLI", "Speaker OFF command received");
+    update_speaker_status(false);
+    return OT_ERROR_NONE;
+}
+
 static const otCliCommand kCommands[] = {
     {"curl", esp_openthread_process_curl},
 #if CONFIG_OPENTHREAD_DNS64_CLIENT
@@ -105,6 +120,8 @@ static const otCliCommand kCommands[] = {
     {"ac_off", esp_openthread_process_ac_off},
     {"tv_on", esp_openthread_process_tv_on},
     {"tv_off", esp_openthread_process_tv_off},
+    {"speaker_on", esp_openthread_process_speaker_on},
+    {"speaker_off", esp_openthread_process_speaker_off},
 };
 
 void esp_cli_custom_command_init()
