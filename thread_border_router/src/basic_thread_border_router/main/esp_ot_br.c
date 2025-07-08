@@ -28,6 +28,7 @@
 
 #include "border_router_launch.h"
 #include "esp_br_web.h"
+#include "openthread/cli.h"
 
 #if CONFIG_EXTERNAL_COEX_ENABLE
 #include "esp_coexist.h"
@@ -37,6 +38,49 @@
 
 extern const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");
 extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
+
+// 전구 상태 전역 변수 및 getter/setter 추가
+bool g_light_status = false;
+
+void update_light_status(bool on) {
+    g_light_status = on;
+    ESP_LOGI("LIGHT", "[update_light_status] Light status updated: %s", on ? "ON" : "OFF");
+}
+
+bool get_light_status(void) {
+    return g_light_status;
+}
+
+// CLI 명령 처리 태스크
+static void cli_command_task(void *pvParameters)
+{
+    char command_buffer[256];
+    int command_length = 0;
+    
+    while (1) {
+        // CLI에서 명령을 읽어옴
+        int c = getchar();
+        if (c != EOF && c != '\n' && c != '\r') {
+            if (command_length < sizeof(command_buffer) - 1) {
+                command_buffer[command_length++] = c;
+            }
+        } else if (c == '\n' || c == '\r') {
+            if (command_length > 0) {
+                command_buffer[command_length] = '\0';
+                
+                // light_on 또는 light_off 명령 처리
+                if (strstr(command_buffer, "light_on") != NULL || 
+                    strstr(command_buffer, "light_off") != NULL) {
+                    handle_cli_command(command_buffer);
+                }
+                
+                command_length = 0;
+            }
+        }
+        
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
 
 static esp_err_t init_spiffs(void)
 {
@@ -115,6 +159,9 @@ void app_main(void)
 #if CONFIG_OPENTHREAD_BR_START_WEB
     esp_br_web_start("/spiffs");
 #endif
+
+    // CLI 명령 처리 태스크 생성
+    xTaskCreate(cli_command_task, "cli_command_task", 4096, NULL, 5, NULL);
 
     launch_openthread_border_router(&platform_config, &rcp_update_config);
 }

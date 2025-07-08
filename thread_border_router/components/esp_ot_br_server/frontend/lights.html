@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>IoT Light Control</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+    .light-bulb { width: 100px; height: 100px; border-radius: 50%; margin: 20px auto; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; transition: all 0.3s; }
+    .light-bulb.on { background: #ffd700; color: #333; box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+    .light-bulb.off { background: #666; color: #fff; }
+    .status { padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center; font-weight: bold; }
+    .status-on { background: #d4edda; color: #155724; }
+    .status-off { background: #f8d7da; color: #721c24; }
+    .btn { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+    .btn-success { background: #28a745; color: white; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-primary { background: #007bff; color: white; }
+    .log { height: 150px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>IoT Light Control</h1>
+    
+    <div style="text-align: center;">
+      <h2>전구 상태</h2>
+      <div id="light-bulb" class="light-bulb off" onclick="toggleLight()">💡</div>
+      <div id="status" class="status status-off">상태: 꺼짐</div>
+      <div style="margin: 20px;">
+        <button class="btn btn-success" onclick="controlLight('on')">켜기</button>
+        <button class="btn btn-danger" onclick="controlLight('off')">끄기</button>
+        <button class="btn btn-primary" onclick="refreshStatus()">새로고침</button>
+      </div>
+    </div>
+    
+    <div>
+      <h3>시스템 로그</h3>
+      <div id="log" class="log">시스템 로그...</div>
+    </div>
+  </div>
+
+  <script>
+    let currentStatus = false;
+    let updateInterval;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      refreshStatus();
+      updateInterval = setInterval(refreshStatus, 2000);
+      addLog("시스템 시작");
+    });
+
+    function toggleLight() {
+      controlLight(!currentStatus ? 'on' : 'off');
+    }
+
+    function controlLight(action) {
+      fetch('/light/control', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: action})
+      })
+      .then(() => {
+        addLog(`전구 ${action === 'on' ? '켜기' : '끄기'} 명령`);
+        refreshStatus();
+      })
+      .catch(error => {
+        addLog(`제어 실패: ${error}`);
+      });
+    }
+
+    function refreshStatus() {
+      fetch('/light/status')
+      .then(response => response.json())
+      .then(data => {
+        updateDisplay(data);
+        addLog(`상태: ${data.status ? '켜짐' : '꺼짐'}`);
+      })
+      .catch(error => {
+        addLog(`상태 조회 실패: ${error}`);
+      });
+    }
+
+    function updateDisplay(data) {
+      currentStatus = data.status;
+      const bulb = document.getElementById('light-bulb');
+      const status = document.getElementById('status');
+      
+      if (data.status) {
+        bulb.classList.remove('off');
+        bulb.classList.add('on');
+        status.classList.remove('status-off');
+        status.classList.add('status-on');
+        status.textContent = '상태: 켜짐';
+      } else {
+        bulb.classList.remove('on');
+        bulb.classList.add('off');
+        status.classList.remove('status-on');
+        status.classList.add('status-off');
+        status.textContent = '상태: 꺼짐';
+      }
+    }
+
+    function addLog(message) {
+      const log = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      log.textContent += `[${time}] ${message}\n`;
+      log.scrollTop = log.scrollHeight;
+    }
+  </script>
+</body>
+
+</html> 

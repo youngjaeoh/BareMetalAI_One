@@ -254,11 +254,24 @@ int main(void)
 		}
 		#endif
 		
-		// 기존 Thread SPI 테스트 코드 (간소화)
+		// IoT 제어 명령 전송
 		char test_data[32];
-		snprintf(test_data, sizeof(test_data), "Hello Thread! Cnt=%lu", test_counter++);
+		static uint8_t light_state = 0;
+		
+		// 5초마다 light on/off 토글
+		if (test_counter % 50 == 0) { // 5초마다 (100ms * 50 = 5000ms)
+			if (light_state) {
+				snprintf(test_data, sizeof(test_data), "light off");
+				light_state = 0;
+			} else {
+				snprintf(test_data, sizeof(test_data), "light on");
+				light_state = 1;
+			}
+		} else {
+			snprintf(test_data, sizeof(test_data), "Hello Thread! Cnt=%lu", test_counter);
+		}
 
-		// 송신 (Hello Thread!)
+		// 송신 (IoT 명령)
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
 		HAL_Delay(2);
 		Thread_SPI_SendPacket(&hspi3, THREAD_SPI_CMD_SEND, (uint8_t*)test_data, strlen(test_data));
@@ -269,15 +282,17 @@ int main(void)
 		UART_Send_String(test_data);
 		UART_Send_String("\r\n");
 
+		HAL_Delay(3000);
+
 		// 수신: 한 번만 ReceivePacket
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
-		HAL_Delay(2);
-		Thread_SPI_Packet_t rx_packet;
-		if (Thread_SPI_ReceivePacket(&hspi3, &rx_packet) == HAL_OK) {
-			// 필요시 OK 등 수신 데이터 출력 가능
-		}
-		HAL_Delay(2);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+		// HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
+		// HAL_Delay(2);
+		// Thread_SPI_Packet_t rx_packet;
+		// if (Thread_SPI_ReceivePacket(&hspi3, &rx_packet) == HAL_OK) {
+		// 	// 필요시 OK 등 수신 데이터 출력 가능
+		// }
+		// HAL_Delay(2);
+		// HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 
 		if(uart1_rx_flag){
 			uart1_rx_flag = 0;

@@ -47,6 +47,9 @@ extern "C" {
 #define ESP_OT_REST_API_NETWORK_CURRENT "/networks/current"
 #define ESP_OT_REST_API_NETWORK_CURRENT_COMMISSION "/networks/commission"
 #define ESP_OT_REST_API_NETWORK_CURRENT_PREFIX "/networks/current/prefix"
+/* IoT Device Control API */
+#define ESP_OT_REST_API_LIGHT_STATUS_PATH "/light/status"
+#define ESP_OT_REST_API_LIGHT_CONTROL_PATH "/light/control"
 
 /*---------------------------------------------------------------------
                             Implement
@@ -235,6 +238,25 @@ otError handle_openthread_delete_network_prefix_request(const cJSON *request);
  *      -   OT_ERROR_INVALID_STATE  :   The commissioner is not active.
  */
 otError handle_openthread_network_commission_request(const cJSON *request);
+
+/**
+ * @brief Provide an entry to get current light status
+ *
+ * @return The cJSON object of light status
+ */
+cJSON *handle_ot_resource_light_status_request(void);
+
+/**
+ * @brief Handle the light control @param request
+ *
+ * @param [in] request  A cJSON format from http request for light control.
+ *
+ * @return
+ *      -   OT_ERROR_NONE           :   On success.
+ *      -   OT_ERROR_INVALID_ARGS   :   The @param request is invalid.
+ *      -   OT_ERROR_FAILED         :   Failed to control light.
+ */
+otError handle_ot_resource_light_control_request(cJSON *request);
 
 /**
  * @brief Provide an entry to discover Thread available network.

@@ -41,6 +41,8 @@
 #include "driver/spi_slave.h"
 #include "driver/gpio.h"
 #include "esp_heap_caps.h"
+#include "openthread/udp.h"
+#include "openthread/ip6.h"
 
 #if CONFIG_OPENTHREAD_STATE_INDICATOR_ENABLE
 #include "ot_led_strip.h"
@@ -63,6 +65,29 @@
 
 #define TAG "ot_esp_cli"
 #define SPI_BUFFER_SIZE 64
+
+// 전등 상태를 저장하는 전역 변수
+static bool light_status = false;
+
+#define BORDER_ROUTER_THREAD_ADDR "fd39:9080:bc00:1:9859:137a:d8d0:ffd9" // 실제 Border Router Thread IPv6 주소로 교체 필요
+#define BORDER_ROUTER_UDP_PORT 80
+
+void send_light_command(const char *cmd) {
+    otInstance *instance = esp_openthread_get_instance();
+    otUdpSocket socket;
+    otMessageInfo messageInfo;
+    memset(&messageInfo, 0, sizeof(messageInfo));
+
+    // Border Router 주소와 포트 설정
+    otIp6AddressFromString(BORDER_ROUTER_THREAD_ADDR, &messageInfo.mPeerAddr);
+    messageInfo.mPeerPort = BORDER_ROUTER_UDP_PORT;
+
+    otUdpOpen(instance, &socket, NULL, NULL);
+    otMessage *msg = otUdpNewMessage(instance, NULL);
+    otMessageAppend(msg, cmd, strlen(cmd));
+    otUdpSend(instance, &socket, msg, &messageInfo);
+    otUdpClose(instance, &socket);
+}
 
 static esp_netif_t *init_openthread_netif(const esp_openthread_platform_config_t *config)
 {
@@ -107,6 +132,8 @@ static void ot_task_worker(void *aContext)
     esp_cli_custom_command_init();
 #endif // CONFIG_OPENTHREAD_CLI_ESP_EXTENSION
 
+
+
     // Run the main loop
 #if CONFIG_OPENTHREAD_CLI
     esp_openthread_cli_create_task();
@@ -116,6 +143,9 @@ static void ot_task_worker(void *aContext)
     otError error = otDatasetGetActiveTlvs(esp_openthread_get_instance(), &dataset);
     ESP_ERROR_CHECK(esp_openthread_auto_start((error == OT_ERROR_NONE) ? &dataset : NULL));
 #endif
+
+
+
     esp_openthread_launch_mainloop();
 
     // Clean up
@@ -125,6 +155,8 @@ static void ot_task_worker(void *aContext)
     esp_vfs_eventfd_unregister();
     vTaskDelete(NULL);
 }
+
+
 
 // SPI slave 초기화 함수 (Thread_Slave 예제 스타일)
 static void init_spi_slave(void) {
@@ -194,11 +226,11 @@ static void spi_slave_task(void *pvParameters)
 
         ret = spi_slave_transmit(RCV_HOST, &t, portMAX_DELAY);
         if (ret == ESP_OK) {
-            printf("[SPI] Received raw: ");
-            for (int i = 0; i < SPI_BUFFER_SIZE; i++) {
-                printf("%02X ", (uint8_t)recvbuf[i]);
-            }
-            printf("\n");
+            // printf("[SPI] Received raw: ");
+            // for (int i = 0; i < SPI_BUFFER_SIZE; i++) {
+            //     printf("%02X ", (uint8_t)recvbuf[i]);
+            // }
+            // printf("\n");
 
             // 버퍼 내에서 헤더(0xA5) 탐색
             int header_idx = -1;
@@ -209,18 +241,58 @@ static void spi_slave_task(void *pvParameters)
                 }
             }
             if (header_idx >= 0 && header_idx + 2 < SPI_BUFFER_SIZE) {
-                uint8_t command = recvbuf[header_idx + 1];
                 uint8_t length = recvbuf[header_idx + 2];
                 if (header_idx + 3 + length < SPI_BUFFER_SIZE) {
                     if (check_packet_checksum((uint8_t*)recvbuf, header_idx, length)) {
-                        printf("[SPI] Checksum OK!\n");
-                        printf("[SPI] Received ASCII: [%02X %02X %02X] ", (uint8_t)recvbuf[header_idx], (uint8_t)recvbuf[header_idx+1], (uint8_t)recvbuf[header_idx+2]);
-                        for (int i = header_idx + 3; i < header_idx + 3 + length; i++) {
-                            char c = recvbuf[i];
-                            printf("%c", (c >= 32 && c <= 126) ? c : '.');
+                        // printf("[SPI] Checksum OK!\n");
+                        // printf("[SPI] Received ASCII: [%02X %02X %02X] ", (uint8_t)recvbuf[header_idx], (uint8_t)recvbuf[header_idx+1], (uint8_t)recvbuf[header_idx+2]);
+                        // for (int i = header_idx + 3; i < header_idx + 3 + length; i++) {
+                        //     char c = recvbuf[i];
+                        //     printf("%c", (c >= 32 && c <= 126) ? c : '.');
+                        // }
+                        // printf("\n");
+                        
+                        // IoT 명령 처리
+                        if (length > 0) {
+                            char received_data[64];
+                            memcpy(received_data, &recvbuf[header_idx + 3], length);
+                            received_data[length] = '\0';
+                            
+                            ESP_LOGI(TAG, "Received data: %s", received_data);
+                            
+                            // "light on" 또는 "light off" 명령 처리
+                            if (strstr(received_data, "light on") != NULL) {
+                                light_status = true;
+                                ESP_LOGI(TAG, "Light turned ON");
+                                otInstance *ot_instance = esp_openthread_get_instance();
+                                if (ot_instance) {
+                                    otDeviceRole role = otThreadGetDeviceRole(ot_instance);
+                                    ESP_LOGI(TAG, "Current Thread role: %d", role);
+                                    if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER) {
+                                        ESP_LOGI(TAG, "Thread network ready, sending light_on command via UDP");
+                                        send_light_command("light_on");
+                                        ESP_LOGI(TAG, "Light ON command sent to Border Router via UDP");
+                                    } else {
+                                        ESP_LOGW(TAG, "Thread network not ready (role: %d), command queued", role);
+                                    }
+                                }
+                            } else if (strstr(received_data, "light off") != NULL) {
+                                light_status = false;
+                                ESP_LOGI(TAG, "Light turned OFF");
+                                otInstance *ot_instance = esp_openthread_get_instance();
+                                if (ot_instance) {
+                                    otDeviceRole role = otThreadGetDeviceRole(ot_instance);
+                                    ESP_LOGI(TAG, "Current Thread role: %d", role);
+                                    if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER) {
+                                        ESP_LOGI(TAG, "Thread network ready, sending light_off command via UDP");
+                                        send_light_command("light_off");
+                                        ESP_LOGI(TAG, "Light OFF command sent to Border Router via UDP");
+                                    } else {
+                                        ESP_LOGW(TAG, "Thread network not ready (role: %d), command queued", role);
+                                    }
+                                }
+                            }
                         }
-                        printf("\n");
-                        printf("[SPI] header=0x%02X, command=0x%02X, length=%d\n", recvbuf[header_idx], command, length);
                     }
                 }
             }

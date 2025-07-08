@@ -22,6 +22,7 @@
 #include "esp_openthread_types.h"
 #include "esp_ot_cli_extension.h"
 #include "esp_rcp_update.h"
+#include "esp_br_web.h"
 #include "esp_vfs_eventfd.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -36,6 +37,7 @@
 #include "openthread/platform/radio.h"
 #include "openthread/tasklet.h"
 #include "openthread/thread_ftd.h"
+#include "openthread/udp.h"
 
 #if CONFIG_OPENTHREAD_CLI_WIFI
 #include "esp_ot_wifi_cmd.h"
@@ -49,6 +51,51 @@
 
 #define TAG "esp_ot_br"
 #define RCP_VERSION_MAX_SIZE 100
+
+/* UDP Server for IoT Control */
+static otUdpSocket s_udp_socket;
+static otSockAddr s_sock_addr;
+
+// 전구 상태 업데이트 함수 선언
+extern void update_light_status(bool status);
+
+static void udp_receive_handler(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
+{
+    char message[256];
+    uint16_t messageLength = otMessageGetLength(aMessage);
+    
+    if (messageLength > 0 && messageLength < sizeof(message)) {
+        otMessageRead(aMessage, 0, message, messageLength);
+        message[messageLength] = '\0';
+        
+        ESP_LOGI(TAG, "UDP 메시지 수신: %s", message);
+        
+        // 전구 상태 업데이트
+        if (strstr(message, "light_on") != NULL) {
+            ESP_LOGI(TAG, ">>> update_light_status(true) 호출");
+            update_light_status(true);
+        } else if (strstr(message, "light_off") != NULL) {
+            ESP_LOGI(TAG, ">>> update_light_status(false) 호출");
+            update_light_status(false);
+        }
+    }
+}
+
+static void init_udp_server(void)
+{
+    otInstance *instance = esp_openthread_get_instance();
+    
+    // UDP 소켓 초기화
+    otUdpOpen(instance, &s_udp_socket, udp_receive_handler, NULL);
+    
+    // 포트 8080에서 수신
+    otIp6AddressFromString("::", &s_sock_addr.mAddress);
+    s_sock_addr.mPort = 80;
+    
+    otUdpBind(instance, &s_udp_socket, &s_sock_addr, OT_NETIF_THREAD);
+    
+    ESP_LOGI(TAG, "UDP 서버 시작됨 - 포트 80");
+}
 
 static esp_openthread_platform_config_t s_openthread_platform_config;
 
@@ -178,6 +225,12 @@ static void ot_task_worker(void *ctx)
     esp_openthread_lock_release();
 
     xTaskCreate(ot_br_init, "ot_br_init", 6144, NULL, 4, NULL);
+    
+    // UDP 서버 초기화
+    esp_openthread_lock_acquire(portMAX_DELAY);
+    init_udp_server();
+    esp_openthread_lock_release();
+    
     // Run the main loop
     esp_openthread_launch_mainloop();
 

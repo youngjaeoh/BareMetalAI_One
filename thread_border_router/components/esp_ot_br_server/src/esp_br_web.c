@@ -31,6 +31,13 @@
 #include "openthread/platform/radio.h"
 #include "openthread/thread.h"
 #include "openthread/thread_ftd.h"
+#include "openthread/udp.h"
+// #include "esp_ot_br.h" // 파일이 없으므로 주석 처리
+
+// esp_ot_br.c의 함수 extern 선언 추가
+extern bool g_light_status;
+extern void update_light_status(bool on);
+extern bool get_light_status(void);
 
 #define MAX_FILE_SIZE (200 * 1024) // 200 KB
 #define MAX_FILE_SIZE_STR "200KB"
@@ -62,6 +69,35 @@ typedef struct http_server {
 } http_server_t;
 
 static http_server_t s_server = {NULL, {"", ""}, "", 80}; /* the instance of server */
+
+/* IoT Device Status */
+// bool g_light_status = false; /* Global light status */
+
+// 전구 상태 업데이트 함수 (외부에서 호출 가능)
+// void update_light_status(bool status)
+// {
+//     extern void update_light_status(bool on);
+//     update_light_status(status);
+//     ESP_LOGI(WEB_TAG, "전구 상태 업데이트: %s", status ? "ON" : "OFF");
+// }
+
+// CLI 명령 처리 함수 (내부용)
+static void handle_cli_command_internal(const char *command)
+{
+    ESP_LOGI(WEB_TAG, "CLI 명령 수신: %s", command);
+    
+    if (strstr(command, "light_on") != NULL) {
+        update_light_status(true);
+    } else if (strstr(command, "light_off") != NULL) {
+        update_light_status(false);
+    }
+}
+
+// 외부에서 호출 가능한 CLI 명령 처리 함수
+void handle_cli_command(const char *command)
+{
+    handle_cli_command_internal(command);
+}
 
 /**
  * @brief The basic parameter definition for parsing url
@@ -213,6 +249,8 @@ static esp_err_t esp_otbr_delete_network_prefix_post_handler(httpd_req_t *req);
 static esp_err_t esp_otbr_network_commission_post_handler(httpd_req_t *req);
 static esp_err_t esp_otbr_network_topology_get_handler(httpd_req_t *req);
 static esp_err_t esp_otbr_current_node_get_handler(httpd_req_t *req);
+static esp_err_t esp_otbr_light_status_get_handler(httpd_req_t *req);
+static esp_err_t esp_otbr_light_control_post_handler(httpd_req_t *req);
 
 static httpd_uri_t s_web_gui_handlers[] = {
     {
@@ -268,6 +306,18 @@ static httpd_uri_t s_web_gui_handlers[] = {
         .method = HTTP_GET,
         .handler = esp_otbr_current_node_get_handler,
         .user_ctx = NULL,
+    },
+    {
+        .uri = ESP_OT_REST_API_LIGHT_STATUS_PATH,
+        .method = HTTP_GET,
+        .handler = esp_otbr_light_status_get_handler,
+        .user_ctx = NULL,
+    },
+    {
+        .uri = ESP_OT_REST_API_LIGHT_CONTROL_PATH,
+        .method = HTTP_POST,
+        .handler = esp_otbr_light_control_post_handler,
+        .user_ctx = &s_server.data,
     },
 };
 
@@ -1090,6 +1140,8 @@ static esp_err_t default_urls_get_handler(httpd_req_t *req)
         return blank_html_get_handler(req);
     } else if (strcmp(info.file_name, "/index.html") == 0) {
         return index_html_get_handler(req, info.file_path);
+    } else if (strcmp(info.file_name, "/lights.html") == 0) {
+        return index_html_get_handler(req, info.file_path);
     } else if (strcmp(info.file_name, "/static/style.css") == 0) {
         return style_css_get_handler(req, info.file_path);
     } else if (strcmp(info.file_name, "/static/restful.js") == 0) {
@@ -1221,4 +1273,34 @@ void esp_br_web_start(char *base_path)
 {
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &handler_got_ip_event, base_path));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &handler_got_ip_event, base_path));
+}
+
+/*-----------------------------------------------------
+ Note：IoT Device Control Handlers
+-----------------------------------------------------*/
+static esp_err_t esp_otbr_light_status_get_handler(httpd_req_t *req)
+{
+    ESP_RETURN_ON_FALSE(req, ESP_FAIL, WEB_TAG, "Failed to parse the light status request");
+    esp_err_t ret = ESP_OK;
+    cJSON *response = handle_ot_resource_light_status_request();
+    ESP_RETURN_ON_FALSE(response, ESP_FAIL, WEB_TAG, "Failed to get light status");
+    ret = httpd_send_packet(req, response);
+    cJSON_Delete(response);
+    return ret;
+}
+
+static esp_err_t esp_otbr_light_control_post_handler(httpd_req_t *req)
+{
+    ESP_RETURN_ON_FALSE(req, ESP_FAIL, WEB_TAG, "Failed to parse the light control request");
+    esp_err_t ret = ESP_OK;
+    cJSON *request = httpd_request_convert2_json(req, cJSON_Object);
+    ESP_RETURN_ON_FALSE(request, ESP_FAIL, WEB_TAG, "Failed to parse light control request");
+    otError error = handle_ot_resource_light_control_request(request);
+    cJSON_Delete(request);
+    if (error == OT_ERROR_NONE) {
+        ret = httpd_send_plain_text(req, "Light control successful");
+    } else {
+        ret = httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Light control failed");
+    }
+    return ret;
 }

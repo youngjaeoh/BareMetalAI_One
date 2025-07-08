@@ -19,10 +19,26 @@
 #include "esp_ot_tcp_socket.h"
 #include "esp_ot_udp_socket.h"
 #include "esp_ot_wifi_cmd.h"
+#include "esp_br_web.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
 #include "freertos/task.h"
 #include "openthread/cli.h"
+
+// Light control command handlers
+static otError esp_openthread_process_light_on(void *aContext, uint8_t aArgsLength, char *aArgs[])
+{
+    ESP_LOGI("CLI", "Light ON command received");
+    update_light_status(true);
+    return OT_ERROR_NONE;
+}
+
+static otError esp_openthread_process_light_off(void *aContext, uint8_t aArgsLength, char *aArgs[])
+{
+    ESP_LOGI("CLI", "Light OFF command received");
+    update_light_status(false);
+    return OT_ERROR_NONE;
+}
 
 static const otCliCommand kCommands[] = {
     {"curl", esp_openthread_process_curl},
@@ -53,6 +69,8 @@ static const otCliCommand kCommands[] = {
 #if CONFIG_OPENTHREAD_BR_LIB_CHECK
     {"brlibcheck", esp_openthread_process_br_lib_compatibility_check},
 #endif // CONFIG_OPENTHREAD_CLI_WIFI
+    {"light_on", esp_openthread_process_light_on},
+    {"light_off", esp_openthread_process_light_off},
 };
 
 void esp_cli_custom_command_init()

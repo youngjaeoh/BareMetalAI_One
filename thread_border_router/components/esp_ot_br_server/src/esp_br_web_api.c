@@ -5,6 +5,7 @@
  */
 
 #include "esp_br_web_api.h"
+#include "esp_br_web.h"
 #include "cJSON.h"
 #include "esp_br_web_base.h"
 #include "esp_check.h"
@@ -15,6 +16,7 @@
 #include "esp_netif_net_stack.h"
 #include "esp_openthread.h"
 #include "esp_openthread_lock.h"
+
 #include "malloc.h"
 #include "sdkconfig.h"
 #include "stdio.h"
@@ -40,6 +42,9 @@
 #define API_TAG "web_api"
 
 static const char s_ot_state[5][10] = {"disabled", "detached", "child", "router", "leader"};
+
+extern bool g_light_status;
+extern void update_light_status(bool on);
 
 /*----------------------------------------------------------------------
                             tools
@@ -991,4 +996,48 @@ cJSON *handle_ot_resource_network_diagnostics_request()
 otError handle_openthread_set_dataset_request(const cJSON *request)
 {
     return OT_ERROR_NONE;
+}
+
+/*-----------------------------------------------------
+ Note：IoT Device Control API
+-----------------------------------------------------*/
+
+cJSON *handle_ot_resource_light_status_request(void)
+{
+    cJSON *root = cJSON_CreateObject();
+    ESP_LOGI("LIGHT_API", "REST API light status: %s", g_light_status ? "ON" : "OFF");
+    cJSON_AddItemToObject(root, "status", cJSON_CreateBool(g_light_status));
+    cJSON_AddItemToObject(root, "device", cJSON_CreateString("light"));
+    cJSON_AddItemToObject(root, "timestamp", cJSON_CreateNumber(xTaskGetTickCount() * portTICK_PERIOD_MS / 1000)); /* Convert to seconds */
+    return root;
+}
+
+otError handle_ot_resource_light_control_request(cJSON *request)
+{
+    otError ret = OT_ERROR_NONE;
+    
+    if (cJSON_IsObject(request)) {
+        cJSON *action = cJSON_GetObjectItem(request, "action");
+        if (cJSON_IsString(action)) {
+            const char *action_str = cJSON_GetStringValue(action);
+            if (strcmp(action_str, "on") == 0) {
+                g_light_status = true;
+                ESP_LOGI(API_TAG, "Light turned ON");
+            } else if (strcmp(action_str, "off") == 0) {
+                g_light_status = false;
+                ESP_LOGI(API_TAG, "Light turned OFF");
+            } else {
+                ret = OT_ERROR_INVALID_ARGS;
+                ESP_LOGE(API_TAG, "Invalid light action: %s", action_str);
+            }
+        } else {
+            ret = OT_ERROR_INVALID_ARGS;
+            ESP_LOGE(API_TAG, "Action field is not a string");
+        }
+    } else {
+        ret = OT_ERROR_INVALID_ARGS;
+        ESP_LOGE(API_TAG, "Request is not an object");
+    }
+    
+    return ret;
 }
