@@ -52,6 +52,8 @@ extern "C" {
 #define ESP_OT_REST_API_LIGHT_CONTROL_PATH "/light/control"
 #define ESP_OT_REST_API_AC_STATUS_PATH "/ac/status"
 #define ESP_OT_REST_API_AC_CONTROL_PATH "/ac/control"
+#define ESP_OT_REST_API_TV_STATUS_PATH "/tv/status"
+#define ESP_OT_REST_API_TV_CONTROL_PATH "/tv/control"
 
 /*---------------------------------------------------------------------
                             Implement
@@ -292,6 +294,25 @@ cJSON *handle_openthread_available_network_request(void);
  * @return The cJSON Object type of Thread network properties.
  */
 cJSON *handle_openthread_network_properties_request(void);
+
+/**
+ * @brief Provide an entry to get current TV status
+ *
+ * @return The cJSON object of TV status
+ */
+cJSON *handle_ot_resource_tv_status_request(void);
+
+/**
+ * @brief Handle the TV control @param request
+ *
+ * @param [in] request  A cJSON format from http request for TV control.
+ *
+ * @return
+ *      -   OT_ERROR_NONE           :   On success.
+ *      -   OT_ERROR_INVALID_ARGS   :   The @param request is invalid.
+ *      -   OT_ERROR_FAILED         :   Failed to control TV.
+ */
+otError handle_ot_resource_tv_control_request(cJSON *request);
 
 #ifdef __cplusplus
 }

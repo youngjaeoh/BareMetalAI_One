@@ -55,6 +55,21 @@ static otError esp_openthread_process_ac_off(void *aContext, uint8_t aArgsLength
     return OT_ERROR_NONE;
 }
 
+// TV control command handlers
+static otError esp_openthread_process_tv_on(void *aContext, uint8_t aArgsLength, char *aArgs[])
+{
+    ESP_LOGI("CLI", "TV ON command received");
+    update_tv_status(true);
+    return OT_ERROR_NONE;
+}
+
+static otError esp_openthread_process_tv_off(void *aContext, uint8_t aArgsLength, char *aArgs[])
+{
+    ESP_LOGI("CLI", "TV OFF command received");
+    update_tv_status(false);
+    return OT_ERROR_NONE;
+}
+
 static const otCliCommand kCommands[] = {
     {"curl", esp_openthread_process_curl},
 #if CONFIG_OPENTHREAD_DNS64_CLIENT
@@ -88,6 +103,8 @@ static const otCliCommand kCommands[] = {
     {"light_off", esp_openthread_process_light_off},
     {"ac_on", esp_openthread_process_ac_on},
     {"ac_off", esp_openthread_process_ac_off},
+    {"tv_on", esp_openthread_process_tv_on},
+    {"tv_off", esp_openthread_process_tv_off},
 };
 
 void esp_cli_custom_command_init()

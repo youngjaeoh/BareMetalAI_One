@@ -59,6 +59,7 @@ static otSockAddr s_sock_addr;
 // 전구 상태 업데이트 함수 선언
 extern void update_light_status(bool status);
 extern void update_ac_status(bool status);
+extern void update_tv_status(bool status);
 
 static void udp_receive_handler(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
 {
@@ -84,6 +85,12 @@ static void udp_receive_handler(void *aContext, otMessage *aMessage, const otMes
         } else if (strstr(message, "ac_off") != NULL) {
             ESP_LOGI(TAG, ">>> update_ac_status(false) 호출");
             update_ac_status(false);
+        } else if (strstr(message, "tv_on") != NULL) {
+            ESP_LOGI(TAG, ">>> update_tv_status(true) 호출");
+            update_tv_status(true);
+        } else if (strstr(message, "tv_off") != NULL) {
+            ESP_LOGI(TAG, ">>> update_tv_status(false) 호출");
+            update_tv_status(false);
         }
     }
 }

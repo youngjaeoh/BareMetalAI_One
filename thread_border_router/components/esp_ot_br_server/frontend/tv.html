@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>TV Control</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #111;
+      min-height: 100vh;
+      width: 100vw;
+      overflow-x: hidden;
+    }
+    .top-right-controls {
+      position: absolute;
+      top: 32px;
+      right: 48px;
+      z-index: 10;
+    }
+    .btn {
+      padding: 8px 16px;
+      margin: 0 4px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: bold;
+      opacity: 0.9;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-warning { background: #ffc107; color: black; }
+    .btn-primary { background: #007bff; color: white; }
+    .center-tv {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100vw;
+    }
+    .tv-svg {
+      width: 400px;
+      height: 300px;
+      cursor: pointer;
+      transition: filter 0.3s;
+      filter: drop-shadow(0 0 40px rgba(255, 193, 7, 0.2));
+    }
+    .tv-on {
+      filter: drop-shadow(0 0 80px #ffc107) drop-shadow(0 0 40px #ffc107);
+    }
+    .tv-off {
+      filter: drop-shadow(0 0 10px #222);
+    }
+    .device-label {
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 30px;
+    }
+    .status-text {
+      color: #ffc107;
+      font-size: 18px;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="top-right-controls">
+    <button class="btn btn-warning" onclick="controlTV('on')">TV 켜기</button>
+    <button class="btn btn-warning" onclick="controlTV('off')">TV 끄기</button>
+    <button class="btn btn-primary" onclick="refreshStatus()">새로고침</button>
+  </div>
+  
+  <div class="center-tv">
+    <svg id="tv" class="tv-svg tv-off" viewBox="0 0 400 300" width="400" height="300" onclick="toggleTV()">
+      <!-- TV 본체 -->
+      <rect x="50" y="50" width="300" height="200" fill="#333" rx="8" />
+      <!-- TV 화면 -->
+      <rect x="60" y="60" width="280" height="180" fill="#000" rx="4" />
+      <!-- TV 화면 내용 (켜져있을 때) -->
+      <rect id="tv-screen" x="70" y="70" width="260" height="160" fill="#000" />
+      <!-- TV 표시등 -->
+      <circle id="tv-indicator" cx="350" cy="80" r="6" fill="#333" />
+      <!-- TV 받침대 -->
+      <rect x="180" y="250" width="40" height="20" fill="#444" rx="4" />
+      <!-- 채널 표시 -->
+      <text x="200" y="280" text-anchor="middle" fill="#ffc107" font-size="12" font-weight="bold">CH 7</text>
+    </svg>
+    <div class="device-label">TV</div>
+    <div id="status-text" class="status-text">꺼짐</div>
+  </div>
+
+  <script>
+    let tvStatus = false;
+    let updateInterval;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      refreshStatus();
+      updateInterval = setInterval(refreshStatus, 2000);
+    });
+
+    function toggleTV() {
+      controlTV(!tvStatus ? 'on' : 'off');
+    }
+
+    function controlTV(action) {
+      fetch('/tv/control', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: action})
+      })
+      .then(() => {
+        refreshStatus();
+      });
+    }
+
+    function refreshStatus() {
+      fetch('/tv/status')
+      .then(response => response.json())
+      .then(data => {
+        tvStatus = data.status;
+        updateTVDisplay(tvStatus);
+      });
+    }
+
+    function updateTVDisplay(isOn) {
+      const tv = document.getElementById('tv');
+      const indicator = document.getElementById('tv-indicator');
+      const screen = document.getElementById('tv-screen');
+      const statusText = document.getElementById('status-text');
+      
+      if (isOn) {
+        tv.classList.remove('tv-off');
+        tv.classList.add('tv-on');
+        indicator.setAttribute('fill', '#ffc107');
+        screen.setAttribute('fill', '#1a1a1a'); // 어두운 회색 (화면이 켜진 것처럼)
+        statusText.textContent = '켜짐';
+        statusText.style.color = '#ffc107';
+      } else {
+        tv.classList.remove('tv-on');
+        tv.classList.add('tv-off');
+        indicator.setAttribute('fill', '#333');
+        screen.setAttribute('fill', '#000'); // 검은색 (화면이 꺼진 것처럼)
+        statusText.textContent = '꺼짐';
+        statusText.style.color = '#666';
+      }
+    }
+  </script>
+</body>
+</html> 
