@@ -6,41 +6,79 @@
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
   <title>IoT Light Control</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-    .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
-    .light-bulb { width: 100px; height: 100px; border-radius: 50%; margin: 20px auto; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; transition: all 0.3s; }
-    .light-bulb.on { background: #ffd700; color: #333; box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
-    .light-bulb.off { background: #666; color: #fff; }
-    .status { padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center; font-weight: bold; }
-    .status-on { background: #d4edda; color: #155724; }
-    .status-off { background: #f8d7da; color: #721c24; }
-    .btn { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #111;
+      min-height: 100vh;
+      width: 100vw;
+      overflow-x: hidden;
+    }
+    .top-right-controls {
+      position: absolute;
+      top: 32px;
+      right: 48px;
+      z-index: 10;
+    }
+    .btn {
+      padding: 8px 16px;
+      margin: 0 4px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: bold;
+      opacity: 0.9;
+      transition: background 0.2s, color 0.2s;
+    }
     .btn-success { background: #28a745; color: white; }
     .btn-danger { background: #dc3545; color: white; }
     .btn-primary { background: #007bff; color: white; }
-    .log { height: 150px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; }
+    .center-lamp {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100vw;
+    }
+    .lamp-svg {
+      width: 220px;
+      height: 320px;
+      cursor: pointer;
+      transition: filter 0.3s;
+      filter: drop-shadow(0 0 40px rgba(255, 255, 100, 0.2));
+    }
+    .lamp-on {
+      filter: drop-shadow(0 0 80px #ffe066) drop-shadow(0 0 40px #ffe066);
+    }
+    .lamp-off {
+      filter: drop-shadow(0 0 10px #222);
+    }
   </style>
 </head>
 
 <body>
-  <div class="container">
-    <h1>IoT Light Control</h1>
-    
-    <div style="text-align: center;">
-      <h2>전구 상태</h2>
-      <div id="light-bulb" class="light-bulb off" onclick="toggleLight()">💡</div>
-      <div id="status" class="status status-off">상태: 꺼짐</div>
-      <div style="margin: 20px;">
-        <button class="btn btn-success" onclick="controlLight('on')">켜기</button>
-        <button class="btn btn-danger" onclick="controlLight('off')">끄기</button>
-        <button class="btn btn-primary" onclick="refreshStatus()">새로고침</button>
-      </div>
-    </div>
-    
-    <div>
-      <h3>시스템 로그</h3>
-      <div id="log" class="log">시스템 로그...</div>
-    </div>
+  <div class="top-right-controls">
+    <button class="btn btn-success" onclick="controlLight('on')">켜기</button>
+    <button class="btn btn-danger" onclick="controlLight('off')">끄기</button>
+    <button class="btn btn-primary" onclick="refreshStatus()">새로고침</button>
+  </div>
+  <div class="center-lamp">
+    <svg id="lamp" class="lamp-svg lamp-off" viewBox="0 0 400 520" width="420" height="600" onclick="toggleLight()">
+      <!-- 갓: 원뿔형 흰색 -->
+      <path d="M60 180 L200 40 L340 180 Z" fill="#f2f2f2" stroke="#ccc" stroke-width="2" />
+      <!-- 갓 아래 고정 파츠 -->
+      <circle cx="200" cy="184" r="12" fill="#222" />
+      <!-- 기둥 -->
+      <rect x="192" y="184" width="16" height="160" fill="#333" rx="4" />
+      <!-- 받침대 (두 겹) -->
+      <ellipse cx="200" cy="360" rx="40" ry="8" fill="#444" />
+      <ellipse cx="200" cy="400" rx="76" ry="20" fill="#222" />
+      <!-- 전구 불빛 -->
+      <circle id="lamp-bulb" cx="200" cy="200" r="20" fill="#333" />
+    </svg>
   </div>
 
   <script>
@@ -50,7 +88,6 @@
     document.addEventListener('DOMContentLoaded', function() {
       refreshStatus();
       updateInterval = setInterval(refreshStatus, 2000);
-      addLog("시스템 시작");
     });
 
     function toggleLight() {
@@ -64,11 +101,7 @@
         body: JSON.stringify({action: action})
       })
       .then(() => {
-        addLog(`전구 ${action === 'on' ? '켜기' : '끄기'} 명령`);
         refreshStatus();
-      })
-      .catch(error => {
-        addLog(`제어 실패: ${error}`);
       });
     }
 
@@ -77,38 +110,25 @@
       .then(response => response.json())
       .then(data => {
         updateDisplay(data);
-        addLog(`상태: ${data.status ? '켜짐' : '꺼짐'}`);
-      })
-      .catch(error => {
-        addLog(`상태 조회 실패: ${error}`);
       });
     }
 
     function updateDisplay(data) {
       currentStatus = data.status;
-      const bulb = document.getElementById('light-bulb');
-      const status = document.getElementById('status');
-      
+      const lamp = document.getElementById('lamp');
+      const bulb = document.getElementById('lamp-bulb');
+      const glow = document.getElementById('lamp-glow');
       if (data.status) {
-        bulb.classList.remove('off');
-        bulb.classList.add('on');
-        status.classList.remove('status-off');
-        status.classList.add('status-on');
-        status.textContent = '상태: 켜짐';
+        lamp.classList.remove('lamp-off');
+        lamp.classList.add('lamp-on');
+        bulb.setAttribute('fill', '#ffe066'); // 밝은 노란색
+        glow.setAttribute('opacity', '0.55'); // 불빛 확산
       } else {
-        bulb.classList.remove('on');
-        bulb.classList.add('off');
-        status.classList.remove('status-on');
-        status.classList.add('status-off');
-        status.textContent = '상태: 꺼짐';
+        lamp.classList.remove('lamp-on');
+        lamp.classList.add('lamp-off');
+        bulb.setAttribute('fill', '#333'); // 어두운 색
+        glow.setAttribute('opacity', '0'); // 불빛 없음
       }
-    }
-
-    function addLog(message) {
-      const log = document.getElementById('log');
-      const time = new Date().toLocaleTimeString();
-      log.textContent += `[${time}] ${message}\n`;
-      log.scrollTop = log.scrollHeight;
     }
   </script>
 </body>

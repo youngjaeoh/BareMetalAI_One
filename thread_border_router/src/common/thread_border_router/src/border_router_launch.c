@@ -68,7 +68,7 @@ static void udp_receive_handler(void *aContext, otMessage *aMessage, const otMes
         otMessageRead(aMessage, 0, message, messageLength);
         message[messageLength] = '\0';
         
-        ESP_LOGI(TAG, "UDP 메시지 수신: %s", message);
+        // ESP_LOGI(TAG, "UDP 메시지 수신: %s", message);
         
         // 전구 상태 업데이트
         if (strstr(message, "light_on") != NULL) {

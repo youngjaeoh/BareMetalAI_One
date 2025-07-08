@@ -1005,7 +1005,7 @@ otError handle_openthread_set_dataset_request(const cJSON *request)
 cJSON *handle_ot_resource_light_status_request(void)
 {
     cJSON *root = cJSON_CreateObject();
-    ESP_LOGI("LIGHT_API", "REST API light status: %s", g_light_status ? "ON" : "OFF");
+    // ESP_LOGI("LIGHT_API", "REST API light status: %s", g_light_status ? "ON" : "OFF");
     cJSON_AddItemToObject(root, "status", cJSON_CreateBool(g_light_status));
     cJSON_AddItemToObject(root, "device", cJSON_CreateString("light"));
     cJSON_AddItemToObject(root, "timestamp", cJSON_CreateNumber(xTaskGetTickCount() * portTICK_PERIOD_MS / 1000)); /* Convert to seconds */
