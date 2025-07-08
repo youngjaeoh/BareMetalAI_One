@@ -62,9 +62,8 @@ typedef struct {
 /* Exported functions prototypes ---------------------------------------------*/
 void DataTransReceive_Init(BoardMode_t mode);
 void DataTransReceive_PingPongTest(void);
-void DataTransReceive_MainProcess(void);
-void DataTransReceive_SendFlag(uint8_t flag);
-void DataTransReceive_ProcessData(void);
+HAL_StatusTypeDef SendPacket(SimplePacket_t* packet);
+HAL_StatusTypeDef ReceivePacket(SimplePacket_t* packet);
 
 /* Exported variables --------------------------------------------------------*/
 extern BoardMode_t current_board_mode;

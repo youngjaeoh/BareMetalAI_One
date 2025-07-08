@@ -42,8 +42,6 @@ static uint8_t is_ping_pong_mode = 0;
 /* Private function prototypes -----------------------------------------------*/
 static void LCD_DisplayMessage(char* message);
 static void LCD_ClearAndReset(void);
-static HAL_StatusTypeDef SendPacket(SimplePacket_t* packet);
-static HAL_StatusTypeDef ReceivePacket(SimplePacket_t* packet);
 
 /* Public functions ----------------------------------------------------------*/
 
@@ -142,103 +140,6 @@ void DataTransReceive_PingPongTest(void)
     }
 }
 
-/**
-  * @brief  Main process function for flag-based data transmission
-  * @param  None
-  * @retval None
-  */
-void DataTransReceive_MainProcess(void)
-{
-    uint32_t current_time = HAL_GetTick();
-    SimplePacket_t packet;
-    
-    is_ping_pong_mode = 0;
-    
-    // Process received packets
-    if (ReceivePacket(&packet) == HAL_OK) {
-        if (packet.msg_type == MSG_FLAG) {
-            flag_status = packet.data;
-            LCD_DisplayMessage("Flag Received");
-            
-            // Board B: 플래그가 켜지면 데이터 전송 시작
-            if (current_board_mode == BOARD_B && flag_status) {
-                LCD_DisplayMessage("Data Send Start");
-            }
-        }
-        else if (packet.msg_type == MSG_DATA) {
-            // Board A: 데이터 수신하여 큐에 저장
-            if (current_board_mode == BOARD_A) {
-                queue_enqueue(&data_process_queue, packet.data);
-                LCD_DisplayMessage("Data Received");
-            }
-        }
-    }
-    
-    // Board B: 플래그가 켜져있으면 주기적으로 데이터 전송
-    if (current_board_mode == BOARD_B && flag_status) {
-        if (current_time - last_data_send_time >= DATA_SEND_INTERVAL) {
-            packet.start_byte = PACKET_START_BYTE;
-            packet.msg_type = MSG_DATA;
-            packet.data = test_data_counter++;
-            packet.end_byte = PACKET_END_BYTE;
-            
-            SendPacket(&packet);
-            LCD_DisplayMessage("Data Sent");
-            last_data_send_time = current_time;
-        }
-    }
-}
-
-/**
-  * @brief  Send flag to Board B
-  * @param  flag: Flag value to send
-  * @retval None
-  */
-void DataTransReceive_SendFlag(uint8_t flag)
-{
-    char debug_msg[50];
-    
-    //sprintf(debug_msg, "SendFlag called: Mode=%d, Flag=%d\r\n", current_board_mode, flag);
-    //UART_Send_String(debug_msg);
-    
-    if (current_board_mode == BOARD_A) {
-        SimplePacket_t packet;
-        
-        packet.start_byte = PACKET_START_BYTE;
-        packet.msg_type = MSG_FLAG;
-        packet.data = flag;
-        packet.end_byte = PACKET_END_BYTE;
-        
-        SendPacket(&packet);
-        LCD_DisplayMessage("Flag Sent");
-        //UART_Send_String("*** FLAG SENT BY MASTER ***\r\n");
-    } else {
-        //UART_Send_String("*** SLAVE CANNOT SEND FLAG ***\r\n");
-        for(;;); // 슬레이브 보드는 플래그를 보낼 수 없음
-    }
-}
-
-/**
-  * @brief  Process accumulated data in queue
-  * @param  None
-  * @retval None
-  */
-void DataTransReceive_ProcessData(void)
-{
-    if (current_board_mode == BOARD_A) {
-        uint8_t data;
-        char message[20];
-        
-        while (!queue_is_empty(&data_process_queue)) {
-            data = queue_dequeue(&data_process_queue);
-            
-            // 데이터 처리 로직 (예: 단순 출력)
-            sprintf(message, "Process: %d", data);
-            LCD_DisplayMessage(message);
-        }
-    }
-}
-
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -274,7 +175,7 @@ static void LCD_ClearAndReset(void)
   * @param  packet: Packet to send
   * @retval HAL status
   */
-static HAL_StatusTypeDef SendPacket(SimplePacket_t* packet)
+HAL_StatusTypeDef SendPacket(SimplePacket_t* packet)
 {
     uint8_t buffer[4];
     char debug_msg[50];
@@ -297,7 +198,7 @@ static HAL_StatusTypeDef SendPacket(SimplePacket_t* packet)
   * @param  packet: Packet buffer to store received data
   * @retval HAL status
   */
-static HAL_StatusTypeDef ReceivePacket(SimplePacket_t* packet)
+HAL_StatusTypeDef ReceivePacket(SimplePacket_t* packet)
 {
     uint8_t byte;
     static uint8_t state = 0;

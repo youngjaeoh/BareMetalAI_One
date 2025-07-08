@@ -206,10 +206,9 @@ int main(void)
 	#ifdef USE_UART3
 	// Initialize Data Transmission/Reception module
 	DataTransReceive_Init(BOARD_A);  // Change to BOARD_B for slave board
-	//DataTransReceive_Init(BOARD_B);  // Change to BOARD_B for slave board
 	
 	// Test mode selection
-	uint8_t test_mode = 1; // 0: Ping-Pong test, 1: Flag-based data transmission
+	uint8_t test_mode = 0; // 0: Ping-Pong test, 1: Flag-based data transmission
 	uint32_t mode_switch_time = HAL_GetTick();
 	#endif
 
@@ -236,52 +235,53 @@ int main(void)
 		// 테스트용 데이터 생성 (카운터 포함)
 		#ifdef USE_UART3	
 		// Run different test modes
-		static uint32_t last_mode_debug = 0;
-		if (HAL_GetTick() - last_mode_debug >= 3000) { // Every 3 seconds
-			char mode_msg[50];
-			sprintf(mode_msg, "Current Mode: %d (0=Ping, 1=Flag)\r\n", test_mode);
-			UART_Send_String(mode_msg);
-			last_mode_debug = HAL_GetTick();
-		}
-		
 		if (test_mode == 0) {
 			// Ping-Pong Test Mode
 			DataTransReceive_PingPongTest();
 		} else {
 			// Flag-based Data Transmission Mode
-			DataTransReceive_MainProcess();
-			
-			// Board A: Send flag every 10 seconds
-			if (current_board_mode == BOARD_A) {
-				static uint32_t last_flag_time = 0;
-				if (HAL_GetTick() - last_flag_time >= 10000) {
-					DataTransReceive_SendFlag(1); // Send flag = 1
-					last_flag_time = HAL_GetTick();
+			SimplePacket_t send_packet = {0};
+			send_packet.start_byte = 0xAA; // 시작 바이트
+			send_packet.msg_type = MSG_FLAG; // 메시지 타입
+			send_packet.data = 0x01; // Flag 데이터
+			send_packet.end_byte = 0x55; // 종료 바이트
+			if(SendPacket(&send_packet) != HAL_OK){
+				LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"Sending Packet error");
+				for(;;); // system halt with error
+			} // Send the packet
+			HAL_Delay(100); // Delay to simulate processing time
+			SimplePacket_t receive_packet = {0};
+			if(ReceivePacket(&receive_packet) == HAL_OK){
+				// Process the received packet
+				if(receive_packet.start_byte == 0xAA && receive_packet.end_byte == 0x55){
+					sprintf((char *)text, "Received Flag: %02X\r\n", receive_packet.data);
+					UART_Send_String((char *)text);
+				} else {
+					UART_Send_String("Invalid Packet Received!\r\n");
 				}
+			} else {
+				UART_Send_String("No Packet Received!\r\n");
 			}
-			
-			// Process accumulated data
-			DataTransReceive_ProcessData();
-		}
+		}	
 		#endif
 		
 		// IoT 제어 명령 전송 (조명, 에어컨, TV, 스피커 테스트)
-		IoT_SendCommand(IOT_CMD_LIGHT_ON);
-		HAL_Delay(500);
-		IoT_SendCommand(IOT_CMD_LIGHT_OFF);
-		HAL_Delay(500);
-		IoT_SendCommand(IOT_CMD_AC_ON);
-		HAL_Delay(500);
-		IoT_SendCommand(IOT_CMD_AC_OFF);
-		HAL_Delay(500);
-		IoT_SendCommand(IOT_CMD_TV_ON);
-		HAL_Delay(500);
-		IoT_SendCommand(IOT_CMD_TV_OFF);
-		HAL_Delay(500);
-		IoT_SendCommand(IOT_CMD_SPEAKER_ON);
-		HAL_Delay(500);
-		IoT_SendCommand(IOT_CMD_SPEAKER_OFF);
-		HAL_Delay(500);
+		// IoT_SendCommand(IOT_CMD_LIGHT_ON);
+		// HAL_Delay(500);
+		// IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+		// HAL_Delay(500);
+		// IoT_SendCommand(IOT_CMD_AC_ON);
+		// HAL_Delay(500);
+		// IoT_SendCommand(IOT_CMD_AC_OFF);
+		// HAL_Delay(500);
+		// IoT_SendCommand(IOT_CMD_TV_ON);
+		// HAL_Delay(500);
+		// IoT_SendCommand(IOT_CMD_TV_OFF);
+		// HAL_Delay(500);
+		// IoT_SendCommand(IOT_CMD_SPEAKER_ON);
+		// HAL_Delay(500);
+		// IoT_SendCommand(IOT_CMD_SPEAKER_OFF);
+		// HAL_Delay(500);
 
 		if(uart1_rx_flag){
 			uart1_rx_flag = 0;
