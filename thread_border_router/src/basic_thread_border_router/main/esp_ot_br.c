@@ -47,7 +47,7 @@ bool g_speaker_status = false;
 
 void update_light_status(bool on) {
     g_light_status = on;
-    ESP_LOGI("LIGHT", "[update_light_status] Light status updated: %s", on ? "ON" : "OFF");
+    // ESP_LOGI("LIGHT", "[update_light_status] Light status updated: %s", on ? "ON" : "OFF");
 }
 
 bool get_light_status(void) {
@@ -56,7 +56,7 @@ bool get_light_status(void) {
 
 void update_ac_status(bool on) {
     g_ac_status = on;
-    ESP_LOGI("AC", "[update_ac_status] Air Conditioner status updated: %s", on ? "ON" : "OFF");
+    // ESP_LOGI("AC", "[update_ac_status] Air Conditioner status updated: %s", on ? "ON" : "OFF");
 }
 
 bool get_ac_status(void) {
@@ -65,7 +65,7 @@ bool get_ac_status(void) {
 
 void update_tv_status(bool on) {
     g_tv_status = on;
-    ESP_LOGI("TV", "[update_tv_status] TV status updated: %s", on ? "ON" : "OFF");
+    // ESP_LOGI("TV", "[update_tv_status] TV status updated: %s", on ? "ON" : "OFF");
 }
 
 bool get_tv_status(void) {
@@ -74,7 +74,7 @@ bool get_tv_status(void) {
 
 void update_speaker_status(bool on) {
     g_speaker_status = on;
-    ESP_LOGI("SPEAKER", "[update_speaker_status] Speaker status updated: %s", on ? "ON" : "OFF");
+    // ESP_LOGI("SPEAKER", "[update_speaker_status] Speaker status updated: %s", on ? "ON" : "OFF");
 }
 
 bool get_speaker_status(void) {
