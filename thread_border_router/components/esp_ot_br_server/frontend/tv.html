@@ -32,7 +32,7 @@
       opacity: 0.9;
       transition: background 0.2s, color 0.2s;
     }
-    .btn-warning { background: #ffc107; color: black; }
+    .btn-success { background: #28a745; color: white; }
     .btn-primary { background: #007bff; color: white; }
     .center-tv {
       display: flex;
@@ -47,10 +47,10 @@
       height: 300px;
       cursor: pointer;
       transition: filter 0.3s;
-      filter: drop-shadow(0 0 40px rgba(255, 193, 7, 0.2));
+      filter: drop-shadow(0 0 40px rgba(0, 123, 255, 0.2));
     }
     .tv-on {
-      filter: drop-shadow(0 0 80px #ffc107) drop-shadow(0 0 40px #ffc107);
+      filter: drop-shadow(0 0 80px #007bff) drop-shadow(0 0 40px #007bff);
     }
     .tv-off {
       filter: drop-shadow(0 0 10px #222);
@@ -62,7 +62,7 @@
       margin-top: 30px;
     }
     .status-text {
-      color: #ffc107;
+      color: #007bff;
       font-size: 18px;
       margin-top: 20px;
       font-weight: bold;
@@ -72,25 +72,27 @@
 
 <body>
   <div class="top-right-controls">
-    <button class="btn btn-warning" onclick="controlTV('on')">TV 켜기</button>
-    <button class="btn btn-warning" onclick="controlTV('off')">TV 끄기</button>
+    <button class="btn btn-success" onclick="controlTV('on')">TV 켜기</button>
+    <button class="btn btn-success" onclick="controlTV('off')">TV 끄기</button>
     <button class="btn btn-primary" onclick="refreshStatus()">새로고침</button>
   </div>
   
   <div class="center-tv">
     <svg id="tv" class="tv-svg tv-off" viewBox="0 0 400 300" width="400" height="300" onclick="toggleTV()">
       <!-- TV 본체 -->
-      <rect x="50" y="50" width="300" height="200" fill="#333" rx="8" />
+      <rect x="50" y="50" width="300" height="200" fill="#333" rx="10" stroke="#555" stroke-width="3"/>
       <!-- TV 화면 -->
-      <rect x="60" y="60" width="280" height="180" fill="#000" rx="4" />
-      <!-- TV 화면 내용 (켜져있을 때) -->
-      <rect id="tv-screen" x="70" y="70" width="260" height="160" fill="#000" />
-      <!-- TV 표시등 -->
-      <circle id="tv-indicator" cx="350" cy="80" r="6" fill="#333" />
+      <rect x="60" y="60" width="280" height="180" fill="#000" rx="5" id="tv-screen"/>
+      <!-- TV 화면 내용 (켜져있을 때만 보임) -->
+      <rect x="70" y="70" width="260" height="160" fill="#007bff" opacity="0" id="tv-content"/>
       <!-- TV 받침대 -->
-      <rect x="180" y="250" width="40" height="20" fill="#444" rx="4" />
-      <!-- 채널 표시 -->
-      <text x="200" y="280" text-anchor="middle" fill="#ffc107" font-size="12" font-weight="bold">CH 7</text>
+      <rect x="180" y="250" width="40" height="20" fill="#444" rx="4"/>
+      <!-- TV 버튼들 -->
+      <circle cx="320" cy="80" r="5" fill="#666" id="tv-button1"/>
+      <circle cx="320" cy="100" r="5" fill="#666" id="tv-button2"/>
+      <circle cx="320" cy="120" r="5" fill="#666" id="tv-button3"/>
+      <!-- TV 표시등 -->
+      <circle cx="320" cy="140" r="3" fill="#333" id="tv-indicator"/>
     </svg>
     <div class="device-label">TV</div>
     <div id="status-text" class="status-text">꺼짐</div>
@@ -99,11 +101,24 @@
   <script>
     let tvStatus = false;
     let updateInterval;
+    let tvOnSound;
+    let tvOffSound;
+
+    // 효과음 URL들
+    const TV_ON_SOUND = "https://www.dropbox.com/scl/fi/o4b26ppzmh05jexqxn3y6/TVStatic_BW.50843.wav?rlkey=jcomlzowru42vnbw2ogu9xewt&st=kc3mxqoj&dl=1";
 
     document.addEventListener('DOMContentLoaded', function() {
       refreshStatus();
       updateInterval = setInterval(refreshStatus, 2000);
+      initSounds();
     });
+
+    function initSounds() {
+      // TV 켜는 소리
+      tvOnSound = new Audio(TV_ON_SOUND);
+      tvOnSound.volume = 1.0;
+      
+    }
 
     function toggleTV() {
       controlTV(!tvStatus ? 'on' : 'off');
@@ -124,29 +139,59 @@
       fetch('/tv/status')
       .then(response => response.json())
       .then(data => {
-        tvStatus = data.status;
+        const newStatus = data.status;
+        
+        // 상태가 변경되었을 때만 효과음 재생
+        if (newStatus !== tvStatus) {
+          if (newStatus) {
+            // TV가 켜질 때만 효과음 재생
+            playTVOnSound();
+          } else {
+            // TV가 꺼질 때 소리 정지
+            stopTVSound();
+          }
+        }
+        
+        tvStatus = newStatus;
         updateTVDisplay(tvStatus);
       });
     }
 
+    function playTVOnSound() {
+      if (tvOnSound) {
+        tvOnSound.currentTime = 0; // 처음부터 재생
+        tvOnSound.play();
+      }
+    }
+
+    function stopTVSound() {
+      if (tvOnSound) {
+        tvOnSound.pause();
+        tvOnSound.currentTime = 0;
+      }
+    }
+
     function updateTVDisplay(isOn) {
       const tv = document.getElementById('tv');
-      const indicator = document.getElementById('tv-indicator');
       const screen = document.getElementById('tv-screen');
+      const content = document.getElementById('tv-content');
+      const indicator = document.getElementById('tv-indicator');
       const statusText = document.getElementById('status-text');
       
       if (isOn) {
         tv.classList.remove('tv-off');
         tv.classList.add('tv-on');
-        indicator.setAttribute('fill', '#ffc107');
-        screen.setAttribute('fill', '#1a1a1a'); // 어두운 회색 (화면이 켜진 것처럼)
+        screen.setAttribute('fill', '#007bff');
+        content.setAttribute('opacity', '1');
+        indicator.setAttribute('fill', '#007bff');
         statusText.textContent = '켜짐';
-        statusText.style.color = '#ffc107';
+        statusText.style.color = '#007bff';
       } else {
         tv.classList.remove('tv-on');
         tv.classList.add('tv-off');
+        screen.setAttribute('fill', '#000');
+        content.setAttribute('opacity', '0');
         indicator.setAttribute('fill', '#333');
-        screen.setAttribute('fill', '#000'); // 검은색 (화면이 꺼진 것처럼)
         statusText.textContent = '꺼짐';
         statusText.style.color = '#666';
       }

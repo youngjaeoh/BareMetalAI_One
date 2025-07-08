@@ -122,11 +122,22 @@
   <script>
     let speakerStatus = false;
     let updateInterval;
+    let audioElement;
+
+    // 원하는 특정 음악 URL (여기에 원하는 음악 URL을 넣으세요)
+    const MUSIC_URL = "https://www.dropbox.com/scl/fi/m4qhnadvp8scl9fj39qvz/Good-Morning-LG-Cyon-Morning-Alarm.mp3?rlkey=6emwnvf80afh3838why0wckht&st=nc851bkq&dl=1";
 
     document.addEventListener('DOMContentLoaded', function() {
       refreshStatus();
       updateInterval = setInterval(refreshStatus, 2000);
+      initAudio();
     });
+
+    function initAudio() {
+      audioElement = new Audio(MUSIC_URL);
+      audioElement.loop = true; // 반복 재생
+      audioElement.volume = 1.0; // 볼륨 100%
+    }
 
     function toggleSpeaker() {
       controlSpeaker(!speakerStatus ? 'on' : 'off');
@@ -149,6 +160,17 @@
       .then(data => {
         speakerStatus = data.status;
         updateSpeakerDisplay(speakerStatus);
+        
+        // 스피커 상태에 따라 음악 자동 재생/정지
+        if (speakerStatus) {
+          if (audioElement && audioElement.paused) {
+            audioElement.play();
+          }
+        } else {
+          if (audioElement && !audioElement.paused) {
+            audioElement.pause();
+          }
+        }
       });
     }
 

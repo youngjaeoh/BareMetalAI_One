@@ -99,11 +99,28 @@
   <script>
     let lightStatus = false;
     let updateInterval;
+    let switchOnSound;
+    let switchOffSound;
+
+    // 효과음 URL들
+    const SWITCH_ON_SOUND = "https://www.dropbox.com/scl/fi/0azvpauoqjgt3z94tn4vd/LightSwitchOff_BW.60473.wav?rlkey=szcm0bbb9x90k1jqc3qm8x5wc&st=rn9kt4xx&dl=1";
+    const SWITCH_OFF_SOUND = "https://www.dropbox.com/scl/fi/0azvpauoqjgt3z94tn4vd/LightSwitchOff_BW.60473.wav?rlkey=szcm0bbb9x90k1jqc3qm8x5wc&st=rn9kt4xx&dl=1";
 
     document.addEventListener('DOMContentLoaded', function() {
       refreshStatus();
       updateInterval = setInterval(refreshStatus, 2000);
+      initSounds();
     });
+
+    function initSounds() {
+      // 전구 켜는 소리
+      switchOnSound = new Audio(SWITCH_ON_SOUND);
+      switchOnSound.volume = 0.7;
+      
+      // 전구 끄는 소리
+      switchOffSound = new Audio(SWITCH_OFF_SOUND);
+      switchOffSound.volume = 0.7;
+    }
 
     function toggleLight() {
       controlLight(!lightStatus ? 'on' : 'off');
@@ -124,9 +141,36 @@
       fetch('/light/status')
       .then(response => response.json())
       .then(data => {
-        lightStatus = data.status;
+        const newStatus = data.status;
+        
+        // 상태가 변경되었을 때만 효과음 재생
+        if (newStatus !== lightStatus) {
+          if (newStatus) {
+            // 전구가 켜질 때
+            playSwitchOnSound();
+          } else {
+            // 전구가 꺼질 때
+            playSwitchOffSound();
+          }
+        }
+        
+        lightStatus = newStatus;
         updateLightDisplay(lightStatus);
       });
+    }
+
+    function playSwitchOnSound() {
+      if (switchOnSound) {
+        switchOnSound.currentTime = 0; // 처음부터 재생
+        switchOnSound.play();
+      }
+    }
+
+    function playSwitchOffSound() {
+      if (switchOffSound) {
+        switchOffSound.currentTime = 0; // 처음부터 재생
+        switchOffSound.play();
+      }
     }
 
     function updateLightDisplay(isOn) {

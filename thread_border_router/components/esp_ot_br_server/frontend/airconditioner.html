@@ -32,7 +32,7 @@
       opacity: 0.9;
       transition: background 0.2s, color 0.2s;
     }
-    .btn-info { background: #17a2b8; color: white; }
+    .btn-success { background: #28a745; color: white; }
     .btn-primary { background: #007bff; color: white; }
     .center-ac {
       display: flex;
@@ -43,14 +43,14 @@
       width: 100vw;
     }
     .ac-svg {
-      width: 300px;
+      width: 400px;
       height: 300px;
       cursor: pointer;
       transition: filter 0.3s;
-      filter: drop-shadow(0 0 40px rgba(100, 200, 255, 0.2));
+      filter: drop-shadow(0 0 40px rgba(0, 123, 255, 0.2));
     }
     .ac-on {
-      filter: drop-shadow(0 0 80px #64c8ff) drop-shadow(0 0 40px #64c8ff);
+      filter: drop-shadow(0 0 80px #007bff) drop-shadow(0 0 40px #007bff);
     }
     .ac-off {
       filter: drop-shadow(0 0 10px #222);
@@ -62,7 +62,7 @@
       margin-top: 30px;
     }
     .status-text {
-      color: #64c8ff;
+      color: #007bff;
       font-size: 18px;
       margin-top: 20px;
       font-weight: bold;
@@ -72,46 +72,105 @@
 
 <body>
   <div class="top-right-controls">
-    <button class="btn btn-info" onclick="controlAC('on')">에어컨 켜기</button>
-    <button class="btn btn-info" onclick="controlAC('off')">에어컨 끄기</button>
+    <button class="btn btn-success" onclick="controlAC('on')">에어컨 켜기</button>
+    <button class="btn btn-success" onclick="controlAC('off')">에어컨 끄기</button>
     <button class="btn btn-primary" onclick="refreshStatus()">새로고침</button>
   </div>
   
   <div class="center-ac">
-    <svg id="ac" class="ac-svg ac-off" viewBox="0 0 300 300" width="300" height="300" onclick="toggleAC()">
+    <svg id="ac" class="ac-svg ac-off" viewBox="0 0 400 300" width="400" height="300" onclick="toggleAC()">
       <!-- 에어컨 본체 -->
-      <rect x="40" y="60" width="220" height="120" fill="#444" rx="12" />
+      <rect x="50" y="50" width="300" height="200" fill="#333" rx="10" stroke="#555" stroke-width="3"/>
       <!-- 에어컨 그릴 -->
-      <rect x="50" y="70" width="200" height="100" fill="#666" rx="8" />
-      <!-- 바람 구멍들 (더 많은 구멍) -->
-      <circle cx="70" cy="90" r="4" fill="#999" />
-      <circle cx="90" cy="90" r="4" fill="#999" />
-      <circle cx="110" cy="90" r="4" fill="#999" />
-      <circle cx="130" cy="90" r="4" fill="#999" />
-      <circle cx="150" cy="90" r="4" fill="#999" />
-      <circle cx="170" cy="90" r="4" fill="#999" />
-      <circle cx="190" cy="90" r="4" fill="#999" />
-      <circle cx="210" cy="90" r="4" fill="#999" />
-      <circle cx="70" cy="110" r="4" fill="#999" />
-      <circle cx="90" cy="110" r="4" fill="#999" />
-      <circle cx="110" cy="110" r="4" fill="#999" />
-      <circle cx="130" cy="110" r="4" fill="#999" />
-      <circle cx="150" cy="110" r="4" fill="#999" />
-      <circle cx="170" cy="110" r="4" fill="#999" />
-      <circle cx="190" cy="110" r="4" fill="#999" />
-      <circle cx="210" cy="110" r="4" fill="#999" />
-      <circle cx="70" cy="130" r="4" fill="#999" />
-      <circle cx="90" cy="130" r="4" fill="#999" />
-      <circle cx="110" cy="130" r="4" fill="#999" />
-      <circle cx="130" cy="130" r="4" fill="#999" />
-      <circle cx="150" cy="130" r="4" fill="#999" />
-      <circle cx="170" cy="130" r="4" fill="#999" />
-      <circle cx="190" cy="130" r="4" fill="#999" />
-      <circle cx="210" cy="130" r="4" fill="#999" />
+      <rect x="60" y="60" width="280" height="180" fill="#444" rx="5" id="ac-grill"/>
+      <!-- 에어컨 구멍들 -->
+      <circle cx="80" cy="80" r="3" fill="#666" />
+      <circle cx="100" cy="80" r="3" fill="#666" />
+      <circle cx="120" cy="80" r="3" fill="#666" />
+      <circle cx="140" cy="80" r="3" fill="#666" />
+      <circle cx="160" cy="80" r="3" fill="#666" />
+      <circle cx="180" cy="80" r="3" fill="#666" />
+      <circle cx="200" cy="80" r="3" fill="#666" />
+      <circle cx="220" cy="80" r="3" fill="#666" />
+      <circle cx="240" cy="80" r="3" fill="#666" />
+      <circle cx="260" cy="80" r="3" fill="#666" />
+      <circle cx="280" cy="80" r="3" fill="#666" />
+      <circle cx="300" cy="80" r="3" fill="#666" />
+      <circle cx="320" cy="80" r="3" fill="#666" />
+      <!-- 두 번째 줄 -->
+      <circle cx="80" cy="100" r="3" fill="#666" />
+      <circle cx="100" cy="100" r="3" fill="#666" />
+      <circle cx="120" cy="100" r="3" fill="#666" />
+      <circle cx="140" cy="100" r="3" fill="#666" />
+      <circle cx="160" cy="100" r="3" fill="#666" />
+      <circle cx="180" cy="100" r="3" fill="#666" />
+      <circle cx="200" cy="100" r="3" fill="#666" />
+      <circle cx="220" cy="100" r="3" fill="#666" />
+      <circle cx="240" cy="100" r="3" fill="#666" />
+      <circle cx="260" cy="100" r="3" fill="#666" />
+      <circle cx="280" cy="100" r="3" fill="#666" />
+      <circle cx="300" cy="100" r="3" fill="#666" />
+      <circle cx="320" cy="100" r="3" fill="#666" />
+      <!-- 세 번째 줄 -->
+      <circle cx="80" cy="120" r="3" fill="#666" />
+      <circle cx="100" cy="120" r="3" fill="#666" />
+      <circle cx="120" cy="120" r="3" fill="#666" />
+      <circle cx="140" cy="120" r="3" fill="#666" />
+      <circle cx="160" cy="120" r="3" fill="#666" />
+      <circle cx="180" cy="120" r="3" fill="#666" />
+      <circle cx="200" cy="120" r="3" fill="#666" />
+      <circle cx="220" cy="120" r="3" fill="#666" />
+      <circle cx="240" cy="120" r="3" fill="#666" />
+      <circle cx="260" cy="120" r="3" fill="#666" />
+      <circle cx="280" cy="120" r="3" fill="#666" />
+      <circle cx="300" cy="120" r="3" fill="#666" />
+      <circle cx="320" cy="120" r="3" fill="#666" />
+      <!-- 네 번째 줄 -->
+      <circle cx="80" cy="140" r="3" fill="#666" />
+      <circle cx="100" cy="140" r="3" fill="#666" />
+      <circle cx="120" cy="140" r="3" fill="#666" />
+      <circle cx="140" cy="140" r="3" fill="#666" />
+      <circle cx="160" cy="140" r="3" fill="#666" />
+      <circle cx="180" cy="140" r="3" fill="#666" />
+      <circle cx="200" cy="140" r="3" fill="#666" />
+      <circle cx="220" cy="140" r="3" fill="#666" />
+      <circle cx="240" cy="140" r="3" fill="#666" />
+      <circle cx="260" cy="140" r="3" fill="#666" />
+      <circle cx="280" cy="140" r="3" fill="#666" />
+      <circle cx="300" cy="140" r="3" fill="#666" />
+      <circle cx="320" cy="140" r="3" fill="#666" />
+      <!-- 다섯 번째 줄 -->
+      <circle cx="80" cy="160" r="3" fill="#666" />
+      <circle cx="100" cy="160" r="3" fill="#666" />
+      <circle cx="120" cy="160" r="3" fill="#666" />
+      <circle cx="140" cy="160" r="3" fill="#666" />
+      <circle cx="160" cy="160" r="3" fill="#666" />
+      <circle cx="180" cy="160" r="3" fill="#666" />
+      <circle cx="200" cy="160" r="3" fill="#666" />
+      <circle cx="220" cy="160" r="3" fill="#666" />
+      <circle cx="240" cy="160" r="3" fill="#666" />
+      <circle cx="260" cy="160" r="3" fill="#666" />
+      <circle cx="280" cy="160" r="3" fill="#666" />
+      <circle cx="300" cy="160" r="3" fill="#666" />
+      <circle cx="320" cy="160" r="3" fill="#666" />
+      <!-- 여섯 번째 줄 -->
+      <circle cx="80" cy="180" r="3" fill="#666" />
+      <circle cx="100" cy="180" r="3" fill="#666" />
+      <circle cx="120" cy="180" r="3" fill="#666" />
+      <circle cx="140" cy="180" r="3" fill="#666" />
+      <circle cx="160" cy="180" r="3" fill="#666" />
+      <circle cx="180" cy="180" r="3" fill="#666" />
+      <circle cx="200" cy="180" r="3" fill="#666" />
+      <circle cx="220" cy="180" r="3" fill="#666" />
+      <circle cx="240" cy="180" r="3" fill="#666" />
+      <circle cx="260" cy="180" r="3" fill="#666" />
+      <circle cx="280" cy="180" r="3" fill="#666" />
+      <circle cx="300" cy="180" r="3" fill="#666" />
+      <circle cx="320" cy="180" r="3" fill="#666" />
       <!-- 에어컨 표시등 -->
-      <circle id="ac-indicator" cx="270" cy="90" r="8" fill="#333" />
+      <circle cx="320" cy="60" r="6" fill="#333" id="ac-indicator"/>
       <!-- 온도 표시 -->
-      <text x="150" y="200" text-anchor="middle" fill="#64c8ff" font-size="16" font-weight="bold">22°C</text>
+      <text x="200" y="220" text-anchor="middle" fill="#007bff" font-size="14" font-weight="bold">24°C</text>
     </svg>
     <div class="device-label">에어컨</div>
     <div id="status-text" class="status-text">꺼짐</div>
@@ -120,11 +179,28 @@
   <script>
     let acStatus = false;
     let updateInterval;
+    let acOnSound;
+    let acOffSound;
+
+    // 효과음 URL들
+    const AC_ON_SOUND = "https://www.dropbox.com/scl/fi/jpimx4h5c40eg3p4mweb5/ac_on.m4a?rlkey=hgyfimr9bkd494zka6wynaqto&st=a58d4vi2&dl=1";
+    const AC_OFF_SOUND = "https://www.dropbox.com/scl/fi/d0h5d2034q3xl6izrocum/ac_off.m4a?rlkey=mxre9nxv8n8mgixlon21qwv57&st=oh70vqen&dl=1";
 
     document.addEventListener('DOMContentLoaded', function() {
       refreshStatus();
       updateInterval = setInterval(refreshStatus, 2000);
+      initSounds();
     });
+
+    function initSounds() {
+      // 에어컨 켜는 소리
+      acOnSound = new Audio(AC_ON_SOUND);
+      acOnSound.volume = 0.8;
+      
+      // 에어컨 끄는 소리
+      acOffSound = new Audio(AC_OFF_SOUND);
+      acOffSound.volume = 0.8;
+    }
 
     function toggleAC() {
       controlAC(!acStatus ? 'on' : 'off');
@@ -145,9 +221,36 @@
       fetch('/ac/status')
       .then(response => response.json())
       .then(data => {
-        acStatus = data.status;
+        const newStatus = data.status;
+        
+        // 상태가 변경되었을 때만 효과음 재생
+        if (newStatus !== acStatus) {
+          if (newStatus) {
+            // 에어컨이 켜질 때
+            playACOnSound();
+          } else {
+            // 에어컨이 꺼질 때
+            playACOffSound();
+          }
+        }
+        
+        acStatus = newStatus;
         updateACDisplay(acStatus);
       });
+    }
+
+    function playACOnSound() {
+      if (acOnSound) {
+        acOnSound.currentTime = 0; // 처음부터 재생
+        acOnSound.play();
+      }
+    }
+
+    function playACOffSound() {
+      if (acOffSound) {
+        acOffSound.currentTime = 0; // 처음부터 재생
+        acOffSound.play();
+      }
     }
 
     function updateACDisplay(isOn) {
@@ -158,9 +261,9 @@
       if (isOn) {
         ac.classList.remove('ac-off');
         ac.classList.add('ac-on');
-        indicator.setAttribute('fill', '#64c8ff');
+        indicator.setAttribute('fill', '#007bff');
         statusText.textContent = '켜짐';
-        statusText.style.color = '#64c8ff';
+        statusText.style.color = '#007bff';
       } else {
         ac.classList.remove('ac-on');
         ac.classList.add('ac-off');
