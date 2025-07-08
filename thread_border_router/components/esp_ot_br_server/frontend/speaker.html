@@ -42,12 +42,13 @@
       height: 100vh;
       width: 100vw;
     }
-    .speaker-svg {
-      width: 350px;
-      height: 350px;
+    .speaker-img {
+      width: 500px;
+      height: 500px;
       cursor: pointer;
       transition: filter 0.3s;
       filter: drop-shadow(0 0 40px rgba(40, 167, 69, 0.2));
+      object-fit: contain;
     }
     .speaker-on {
       filter: drop-shadow(0 0 80px #28a745) drop-shadow(0 0 40px #28a745);
@@ -78,43 +79,7 @@
   </div>
   
   <div class="center-speaker">
-    <svg id="speaker" class="speaker-svg speaker-off" viewBox="0 0 400 400" width="350" height="350" onclick="toggleSpeaker()">
-      <!-- 스피커 본체 -->
-      <rect x="100" y="150" width="200" height="100" fill="#333" rx="8" />
-      <!-- 스피커 그릴 -->
-      <rect x="110" y="160" width="180" height="80" fill="#555" rx="6" />
-      <!-- 스피커 구멍들 -->
-      <circle cx="130" cy="180" r="8" fill="#777" />
-      <circle cx="150" cy="180" r="8" fill="#777" />
-      <circle cx="170" cy="180" r="8" fill="#777" />
-      <circle cx="190" cy="180" r="8" fill="#777" />
-      <circle cx="210" cy="180" r="8" fill="#777" />
-      <circle cx="230" cy="180" r="8" fill="#777" />
-      <circle cx="250" cy="180" r="8" fill="#777" />
-      <circle cx="270" cy="180" r="8" fill="#777" />
-      <circle cx="130" cy="200" r="8" fill="#777" />
-      <circle cx="150" cy="200" r="8" fill="#777" />
-      <circle cx="170" cy="200" r="8" fill="#777" />
-      <circle cx="190" cy="200" r="8" fill="#777" />
-      <circle cx="210" cy="200" r="8" fill="#777" />
-      <circle cx="230" cy="200" r="8" fill="#777" />
-      <circle cx="250" cy="200" r="8" fill="#777" />
-      <circle cx="270" cy="200" r="8" fill="#777" />
-      <circle cx="130" cy="220" r="8" fill="#777" />
-      <circle cx="150" cy="220" r="8" fill="#777" />
-      <circle cx="170" cy="220" r="8" fill="#777" />
-      <circle cx="190" cy="220" r="8" fill="#777" />
-      <circle cx="210" cy="220" r="8" fill="#777" />
-      <circle cx="230" cy="220" r="8" fill="#777" />
-      <circle cx="250" cy="220" r="8" fill="#777" />
-      <circle cx="270" cy="220" r="8" fill="#777" />
-      <!-- 스피커 표시등 -->
-      <circle id="speaker-indicator" cx="320" cy="170" r="6" fill="#333" />
-      <!-- 스피커 받침대 -->
-      <rect x="180" y="260" width="40" height="20" fill="#444" rx="4" />
-      <!-- 볼륨 표시 -->
-      <text x="200" y="290" text-anchor="middle" fill="#28a745" font-size="12" font-weight="bold">VOL 50%</text>
-    </svg>
+    <img id="speaker" class="speaker-img speaker-off" src="https://www.dropbox.com/scl/fi/fmxvm638zl5j9cg05n3hy/speaker.png?rlkey=wtxe9zeokkeih5rnnnsk50d8g&st=o047tqg9&dl=1" width="500" height="500" onclick="toggleSpeaker()" alt="Speaker">
     <div class="device-label">스피커</div>
     <div id="status-text" class="status-text">꺼짐</div>
   </div>
@@ -123,20 +88,28 @@
     let speakerStatus = false;
     let updateInterval;
     let audioElement;
+    let speakerImage;
 
     // 원하는 특정 음악 URL (여기에 원하는 음악 URL을 넣으세요)
-    const MUSIC_URL = "https://www.dropbox.com/scl/fi/m4qhnadvp8scl9fj39qvz/Good-Morning-LG-Cyon-Morning-Alarm.mp3?rlkey=6emwnvf80afh3838why0wckht&st=nc851bkq&dl=1";
+    const MUSIC_URL = "https://www.dropbox.com/scl/fi/o4b26ppzmh05jexqxn3y6/Good-Morning-LG-Cyon-Morning-Alarm.mp3?rlkey=6emwnvf80afh3838why0wckht&st=nc851bkq&dl=1";
 
     document.addEventListener('DOMContentLoaded', function() {
       refreshStatus();
       updateInterval = setInterval(refreshStatus, 2000);
-      initAudio();
+      preloadResources();
     });
 
-    function initAudio() {
+    function preloadResources() {
+      // 이미지 미리 로드
+      speakerImage = new Image();
+      speakerImage.src = "https://www.dropbox.com/scl/fi/fmxvm638zl5j9cg05n3hy/speaker.png?rlkey=wtxe9zeokkeih5rnnnsk50d8g&st=o047tqg9&dl=1";
+      
+      // 음악 미리 로드
       audioElement = new Audio(MUSIC_URL);
       audioElement.loop = true; // 반복 재생
       audioElement.volume = 1.0; // 볼륨 100%
+      
+      console.log("스피커 리소스 미리 로드 완료!");
     }
 
     function toggleSpeaker() {
@@ -176,19 +149,16 @@
 
     function updateSpeakerDisplay(isOn) {
       const speaker = document.getElementById('speaker');
-      const indicator = document.getElementById('speaker-indicator');
       const statusText = document.getElementById('status-text');
       
       if (isOn) {
         speaker.classList.remove('speaker-off');
         speaker.classList.add('speaker-on');
-        indicator.setAttribute('fill', '#28a745');
         statusText.textContent = '켜짐';
         statusText.style.color = '#28a745';
       } else {
         speaker.classList.remove('speaker-on');
         speaker.classList.add('speaker-off');
-        indicator.setAttribute('fill', '#333');
         statusText.textContent = '꺼짐';
         statusText.style.color = '#666';
       }

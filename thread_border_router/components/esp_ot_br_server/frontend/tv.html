@@ -42,12 +42,13 @@
       height: 100vh;
       width: 100vw;
     }
-    .tv-svg {
-      width: 400px;
-      height: 300px;
+    .tv-img {
+      width: 600px;
+      height: 450px;
       cursor: pointer;
       transition: filter 0.3s;
       filter: drop-shadow(0 0 40px rgba(0, 123, 255, 0.2));
+      object-fit: contain;
     }
     .tv-on {
       filter: drop-shadow(0 0 80px #007bff) drop-shadow(0 0 40px #007bff);
@@ -78,22 +79,7 @@
   </div>
   
   <div class="center-tv">
-    <svg id="tv" class="tv-svg tv-off" viewBox="0 0 400 300" width="400" height="300" onclick="toggleTV()">
-      <!-- TV 본체 -->
-      <rect x="50" y="50" width="300" height="200" fill="#333" rx="10" stroke="#555" stroke-width="3"/>
-      <!-- TV 화면 -->
-      <rect x="60" y="60" width="280" height="180" fill="#000" rx="5" id="tv-screen"/>
-      <!-- TV 화면 내용 (켜져있을 때만 보임) -->
-      <rect x="70" y="70" width="260" height="160" fill="#007bff" opacity="0" id="tv-content"/>
-      <!-- TV 받침대 -->
-      <rect x="180" y="250" width="40" height="20" fill="#444" rx="4"/>
-      <!-- TV 버튼들 -->
-      <circle cx="320" cy="80" r="5" fill="#666" id="tv-button1"/>
-      <circle cx="320" cy="100" r="5" fill="#666" id="tv-button2"/>
-      <circle cx="320" cy="120" r="5" fill="#666" id="tv-button3"/>
-      <!-- TV 표시등 -->
-      <circle cx="320" cy="140" r="3" fill="#333" id="tv-indicator"/>
-    </svg>
+    <img id="tv" class="tv-img tv-off" src="https://www.dropbox.com/scl/fi/8ovfiuqr6xyhe5080xi48/tv_final_off-Photoroom.png?rlkey=5m5zy1p6m0sg4x8us8gb0jr20&st=1vhyivh5&dl=1" alt="TV" width="600" height="450" onclick="toggleTV()">
     <div class="device-label">TV</div>
     <div id="status-text" class="status-text">꺼짐</div>
   </div>
@@ -102,22 +88,35 @@
     let tvStatus = false;
     let updateInterval;
     let tvOnSound;
-    let tvOffSound;
+    let tvOffImage;
+    let tvOnImage;
 
     // 효과음 URL들
     const TV_ON_SOUND = "https://www.dropbox.com/scl/fi/o4b26ppzmh05jexqxn3y6/TVStatic_BW.50843.wav?rlkey=jcomlzowru42vnbw2ogu9xewt&st=kc3mxqoj&dl=1";
+    
+    // TV 이미지 URL들
+    const TV_OFF_IMAGE = "https://www.dropbox.com/scl/fi/8ovfiuqr6xyhe5080xi48/tv_final_off-Photoroom.png?rlkey=5m5zy1p6m0sg4x8us8gb0jr20&st=1vhyivh5&dl=1";
+    const TV_ON_IMAGE = "https://www.dropbox.com/scl/fi/2aqff6bdi8z91fmo3w0u9/tv_final_on-Photoroom.png?rlkey=hbad84pbfmhympjvrw1p7tx4e&st=vt09i7e6&dl=1";
 
     document.addEventListener('DOMContentLoaded', function() {
       refreshStatus();
       updateInterval = setInterval(refreshStatus, 2000);
-      initSounds();
+      preloadResources();
     });
 
-    function initSounds() {
-      // TV 켜는 소리
+    function preloadResources() {
+      // 이미지들 미리 로드
+      tvOffImage = new Image();
+      tvOffImage.src = TV_OFF_IMAGE;
+      
+      tvOnImage = new Image();
+      tvOnImage.src = TV_ON_IMAGE;
+      
+      // 소리 미리 로드
       tvOnSound = new Audio(TV_ON_SOUND);
       tvOnSound.volume = 1.0;
       
+      console.log("TV 리소스 미리 로드 완료!");
     }
 
     function toggleTV() {
@@ -173,25 +172,18 @@
 
     function updateTVDisplay(isOn) {
       const tv = document.getElementById('tv');
-      const screen = document.getElementById('tv-screen');
-      const content = document.getElementById('tv-content');
-      const indicator = document.getElementById('tv-indicator');
       const statusText = document.getElementById('status-text');
       
       if (isOn) {
         tv.classList.remove('tv-off');
         tv.classList.add('tv-on');
-        screen.setAttribute('fill', '#007bff');
-        content.setAttribute('opacity', '1');
-        indicator.setAttribute('fill', '#007bff');
+        tv.src = TV_ON_IMAGE;
         statusText.textContent = '켜짐';
         statusText.style.color = '#007bff';
       } else {
         tv.classList.remove('tv-on');
         tv.classList.add('tv-off');
-        screen.setAttribute('fill', '#000');
-        content.setAttribute('opacity', '0');
-        indicator.setAttribute('fill', '#333');
+        tv.src = TV_OFF_IMAGE;
         statusText.textContent = '꺼짐';
         statusText.style.color = '#666';
       }

@@ -42,12 +42,13 @@
       height: 100vh;
       width: 100vw;
     }
-    .ac-svg {
-      width: 400px;
-      height: 300px;
+    .ac-img {
+      width: 600px;
+      height: 450px;
       cursor: pointer;
       transition: filter 0.3s;
       filter: drop-shadow(0 0 40px rgba(0, 123, 255, 0.2));
+      object-fit: contain;
     }
     .ac-on {
       filter: drop-shadow(0 0 80px #007bff) drop-shadow(0 0 40px #007bff);
@@ -78,100 +79,7 @@
   </div>
   
   <div class="center-ac">
-    <svg id="ac" class="ac-svg ac-off" viewBox="0 0 400 300" width="400" height="300" onclick="toggleAC()">
-      <!-- 에어컨 본체 -->
-      <rect x="50" y="50" width="300" height="200" fill="#333" rx="10" stroke="#555" stroke-width="3"/>
-      <!-- 에어컨 그릴 -->
-      <rect x="60" y="60" width="280" height="180" fill="#444" rx="5" id="ac-grill"/>
-      <!-- 에어컨 구멍들 -->
-      <circle cx="80" cy="80" r="3" fill="#666" />
-      <circle cx="100" cy="80" r="3" fill="#666" />
-      <circle cx="120" cy="80" r="3" fill="#666" />
-      <circle cx="140" cy="80" r="3" fill="#666" />
-      <circle cx="160" cy="80" r="3" fill="#666" />
-      <circle cx="180" cy="80" r="3" fill="#666" />
-      <circle cx="200" cy="80" r="3" fill="#666" />
-      <circle cx="220" cy="80" r="3" fill="#666" />
-      <circle cx="240" cy="80" r="3" fill="#666" />
-      <circle cx="260" cy="80" r="3" fill="#666" />
-      <circle cx="280" cy="80" r="3" fill="#666" />
-      <circle cx="300" cy="80" r="3" fill="#666" />
-      <circle cx="320" cy="80" r="3" fill="#666" />
-      <!-- 두 번째 줄 -->
-      <circle cx="80" cy="100" r="3" fill="#666" />
-      <circle cx="100" cy="100" r="3" fill="#666" />
-      <circle cx="120" cy="100" r="3" fill="#666" />
-      <circle cx="140" cy="100" r="3" fill="#666" />
-      <circle cx="160" cy="100" r="3" fill="#666" />
-      <circle cx="180" cy="100" r="3" fill="#666" />
-      <circle cx="200" cy="100" r="3" fill="#666" />
-      <circle cx="220" cy="100" r="3" fill="#666" />
-      <circle cx="240" cy="100" r="3" fill="#666" />
-      <circle cx="260" cy="100" r="3" fill="#666" />
-      <circle cx="280" cy="100" r="3" fill="#666" />
-      <circle cx="300" cy="100" r="3" fill="#666" />
-      <circle cx="320" cy="100" r="3" fill="#666" />
-      <!-- 세 번째 줄 -->
-      <circle cx="80" cy="120" r="3" fill="#666" />
-      <circle cx="100" cy="120" r="3" fill="#666" />
-      <circle cx="120" cy="120" r="3" fill="#666" />
-      <circle cx="140" cy="120" r="3" fill="#666" />
-      <circle cx="160" cy="120" r="3" fill="#666" />
-      <circle cx="180" cy="120" r="3" fill="#666" />
-      <circle cx="200" cy="120" r="3" fill="#666" />
-      <circle cx="220" cy="120" r="3" fill="#666" />
-      <circle cx="240" cy="120" r="3" fill="#666" />
-      <circle cx="260" cy="120" r="3" fill="#666" />
-      <circle cx="280" cy="120" r="3" fill="#666" />
-      <circle cx="300" cy="120" r="3" fill="#666" />
-      <circle cx="320" cy="120" r="3" fill="#666" />
-      <!-- 네 번째 줄 -->
-      <circle cx="80" cy="140" r="3" fill="#666" />
-      <circle cx="100" cy="140" r="3" fill="#666" />
-      <circle cx="120" cy="140" r="3" fill="#666" />
-      <circle cx="140" cy="140" r="3" fill="#666" />
-      <circle cx="160" cy="140" r="3" fill="#666" />
-      <circle cx="180" cy="140" r="3" fill="#666" />
-      <circle cx="200" cy="140" r="3" fill="#666" />
-      <circle cx="220" cy="140" r="3" fill="#666" />
-      <circle cx="240" cy="140" r="3" fill="#666" />
-      <circle cx="260" cy="140" r="3" fill="#666" />
-      <circle cx="280" cy="140" r="3" fill="#666" />
-      <circle cx="300" cy="140" r="3" fill="#666" />
-      <circle cx="320" cy="140" r="3" fill="#666" />
-      <!-- 다섯 번째 줄 -->
-      <circle cx="80" cy="160" r="3" fill="#666" />
-      <circle cx="100" cy="160" r="3" fill="#666" />
-      <circle cx="120" cy="160" r="3" fill="#666" />
-      <circle cx="140" cy="160" r="3" fill="#666" />
-      <circle cx="160" cy="160" r="3" fill="#666" />
-      <circle cx="180" cy="160" r="3" fill="#666" />
-      <circle cx="200" cy="160" r="3" fill="#666" />
-      <circle cx="220" cy="160" r="3" fill="#666" />
-      <circle cx="240" cy="160" r="3" fill="#666" />
-      <circle cx="260" cy="160" r="3" fill="#666" />
-      <circle cx="280" cy="160" r="3" fill="#666" />
-      <circle cx="300" cy="160" r="3" fill="#666" />
-      <circle cx="320" cy="160" r="3" fill="#666" />
-      <!-- 여섯 번째 줄 -->
-      <circle cx="80" cy="180" r="3" fill="#666" />
-      <circle cx="100" cy="180" r="3" fill="#666" />
-      <circle cx="120" cy="180" r="3" fill="#666" />
-      <circle cx="140" cy="180" r="3" fill="#666" />
-      <circle cx="160" cy="180" r="3" fill="#666" />
-      <circle cx="180" cy="180" r="3" fill="#666" />
-      <circle cx="200" cy="180" r="3" fill="#666" />
-      <circle cx="220" cy="180" r="3" fill="#666" />
-      <circle cx="240" cy="180" r="3" fill="#666" />
-      <circle cx="260" cy="180" r="3" fill="#666" />
-      <circle cx="280" cy="180" r="3" fill="#666" />
-      <circle cx="300" cy="180" r="3" fill="#666" />
-      <circle cx="320" cy="180" r="3" fill="#666" />
-      <!-- 에어컨 표시등 -->
-      <circle cx="320" cy="60" r="6" fill="#333" id="ac-indicator"/>
-      <!-- 온도 표시 -->
-      <text x="200" y="220" text-anchor="middle" fill="#007bff" font-size="14" font-weight="bold">24°C</text>
-    </svg>
+    <img id="ac" class="ac-img ac-off" src="https://www.dropbox.com/scl/fi/jbawa70n39cwbanp25aqx/ac_off-Photoroom.png?rlkey=79vywf3jedjn1hl006ykegciy&st=1temsngj&dl=1" alt="Air Conditioner" width="600" height="450" onclick="toggleAC()">
     <div class="device-label">에어컨</div>
     <div id="status-text" class="status-text">꺼짐</div>
   </div>
@@ -181,25 +89,39 @@
     let updateInterval;
     let acOnSound;
     let acOffSound;
+    let acOffImage;
+    let acOnImage;
 
     // 효과음 URL들
     const AC_ON_SOUND = "https://www.dropbox.com/scl/fi/jpimx4h5c40eg3p4mweb5/ac_on.m4a?rlkey=hgyfimr9bkd494zka6wynaqto&st=a58d4vi2&dl=1";
     const AC_OFF_SOUND = "https://www.dropbox.com/scl/fi/d0h5d2034q3xl6izrocum/ac_off.m4a?rlkey=mxre9nxv8n8mgixlon21qwv57&st=oh70vqen&dl=1";
+    
+    // 에어컨 이미지 URL들
+    const AC_OFF_IMAGE = "https://www.dropbox.com/scl/fi/jbawa70n39cwbanp25aqx/ac_off-Photoroom.png?rlkey=79vywf3jedjn1hl006ykegciy&st=1temsngj&dl=1";
+    const AC_ON_IMAGE = "https://www.dropbox.com/scl/fi/7gilbngfuj5py7z33rcxz/ac_on-Photoroom.png?rlkey=tycro3gqsh8hfcziqb7w9dchj&st=grkrub54&dl=1";
 
     document.addEventListener('DOMContentLoaded', function() {
       refreshStatus();
       updateInterval = setInterval(refreshStatus, 2000);
-      initSounds();
+      preloadResources();
     });
 
-    function initSounds() {
-      // 에어컨 켜는 소리
-      acOnSound = new Audio(AC_ON_SOUND);
-      acOnSound.volume = 0.8;
+    function preloadResources() {
+      // 이미지들 미리 로드
+      acOffImage = new Image();
+      acOffImage.src = AC_OFF_IMAGE;
       
-      // 에어컨 끄는 소리
+      acOnImage = new Image();
+      acOnImage.src = AC_ON_IMAGE;
+      
+      // 소리들 미리 로드
+      acOnSound = new Audio(AC_ON_SOUND);
+      acOnSound.volume = 1.0;
+      
       acOffSound = new Audio(AC_OFF_SOUND);
-      acOffSound.volume = 0.8;
+      acOffSound.volume = 1.0;
+      
+      console.log("에어컨 리소스 미리 로드 완료!");
     }
 
     function toggleAC() {
@@ -255,19 +177,18 @@
 
     function updateACDisplay(isOn) {
       const ac = document.getElementById('ac');
-      const indicator = document.getElementById('ac-indicator');
       const statusText = document.getElementById('status-text');
       
       if (isOn) {
         ac.classList.remove('ac-off');
         ac.classList.add('ac-on');
-        indicator.setAttribute('fill', '#007bff');
+        ac.src = acOnImage.src;
         statusText.textContent = '켜짐';
         statusText.style.color = '#007bff';
       } else {
         ac.classList.remove('ac-on');
         ac.classList.add('ac-off');
-        indicator.setAttribute('fill', '#333');
+        ac.src = acOffImage.src;
         statusText.textContent = '꺼짐';
         statusText.style.color = '#666';
       }
