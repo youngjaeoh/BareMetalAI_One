@@ -50,6 +50,8 @@ extern "C" {
 /* IoT Device Control API */
 #define ESP_OT_REST_API_LIGHT_STATUS_PATH "/light/status"
 #define ESP_OT_REST_API_LIGHT_CONTROL_PATH "/light/control"
+#define ESP_OT_REST_API_AC_STATUS_PATH "/ac/status"
+#define ESP_OT_REST_API_AC_CONTROL_PATH "/ac/control"
 
 /*---------------------------------------------------------------------
                             Implement
@@ -257,6 +259,25 @@ cJSON *handle_ot_resource_light_status_request(void);
  *      -   OT_ERROR_FAILED         :   Failed to control light.
  */
 otError handle_ot_resource_light_control_request(cJSON *request);
+
+/**
+ * @brief Provide an entry to get current airconditioner status
+ *
+ * @return The cJSON object of airconditioner status
+ */
+cJSON *handle_ot_resource_ac_status_request(void);
+
+/**
+ * @brief Handle the airconditioner control @param request
+ *
+ * @param [in] request  A cJSON format from http request for airconditioner control.
+ *
+ * @return
+ *      -   OT_ERROR_NONE           :   On success.
+ *      -   OT_ERROR_INVALID_ARGS   :   The @param request is invalid.
+ *      -   OT_ERROR_FAILED         :   Failed to control airconditioner.
+ */
+otError handle_ot_resource_ac_control_request(cJSON *request);
 
 /**
  * @brief Provide an entry to discover Thread available network.

@@ -41,6 +41,7 @@ extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
 
 // 전구 상태 전역 변수 및 getter/setter 추가
 bool g_light_status = false;
+bool g_ac_status = false;
 
 void update_light_status(bool on) {
     g_light_status = on;
@@ -49,6 +50,15 @@ void update_light_status(bool on) {
 
 bool get_light_status(void) {
     return g_light_status;
+}
+
+void update_ac_status(bool on) {
+    g_ac_status = on;
+    ESP_LOGI("AC", "[update_ac_status] Air Conditioner status updated: %s", on ? "ON" : "OFF");
+}
+
+bool get_ac_status(void) {
+    return g_ac_status;
 }
 
 // CLI 명령 처리 태스크
@@ -70,7 +80,9 @@ static void cli_command_task(void *pvParameters)
                 
                 // light_on 또는 light_off 명령 처리
                 if (strstr(command_buffer, "light_on") != NULL || 
-                    strstr(command_buffer, "light_off") != NULL) {
+                    strstr(command_buffer, "light_off") != NULL ||
+                    strstr(command_buffer, "ac_on") != NULL ||
+                    strstr(command_buffer, "ac_off") != NULL) {
                     handle_cli_command(command_buffer);
                 }
                 

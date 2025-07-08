@@ -56,15 +56,28 @@
     .lamp-off {
       filter: drop-shadow(0 0 10px #222);
     }
+    .device-label {
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 30px;
+    }
+    .status-text {
+      color: #ffe066;
+      font-size: 18px;
+      margin-top: 20px;
+      font-weight: bold;
+    }
   </style>
 </head>
 
 <body>
   <div class="top-right-controls">
-    <button class="btn btn-success" onclick="controlLight('on')">켜기</button>
-    <button class="btn btn-danger" onclick="controlLight('off')">끄기</button>
+    <button class="btn btn-success" onclick="controlLight('on')">조명 켜기</button>
+    <button class="btn btn-danger" onclick="controlLight('off')">조명 끄기</button>
     <button class="btn btn-primary" onclick="refreshStatus()">새로고침</button>
   </div>
+  
   <div class="center-lamp">
     <svg id="lamp" class="lamp-svg lamp-off" viewBox="0 0 400 520" width="420" height="600" onclick="toggleLight()">
       <!-- 갓: 원뿔형 흰색 -->
@@ -79,10 +92,12 @@
       <!-- 전구 불빛 -->
       <circle id="lamp-bulb" cx="200" cy="200" r="20" fill="#333" />
     </svg>
+    <div class="device-label">조명</div>
+    <div id="status-text" class="status-text">꺼짐</div>
   </div>
 
   <script>
-    let currentStatus = false;
+    let lightStatus = false;
     let updateInterval;
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -91,7 +106,7 @@
     });
 
     function toggleLight() {
-      controlLight(!currentStatus ? 'on' : 'off');
+      controlLight(!lightStatus ? 'on' : 'off');
     }
 
     function controlLight(action) {
@@ -109,25 +124,28 @@
       fetch('/light/status')
       .then(response => response.json())
       .then(data => {
-        updateDisplay(data);
+        lightStatus = data.status;
+        updateLightDisplay(lightStatus);
       });
     }
 
-    function updateDisplay(data) {
-      currentStatus = data.status;
+    function updateLightDisplay(isOn) {
       const lamp = document.getElementById('lamp');
       const bulb = document.getElementById('lamp-bulb');
-      const glow = document.getElementById('lamp-glow');
-      if (data.status) {
+      const statusText = document.getElementById('status-text');
+      
+      if (isOn) {
         lamp.classList.remove('lamp-off');
         lamp.classList.add('lamp-on');
-        bulb.setAttribute('fill', '#ffe066'); // 밝은 노란색
-        glow.setAttribute('opacity', '0.55'); // 불빛 확산
+        bulb.setAttribute('fill', '#ffe066');
+        statusText.textContent = '켜짐';
+        statusText.style.color = '#ffe066';
       } else {
         lamp.classList.remove('lamp-on');
         lamp.classList.add('lamp-off');
-        bulb.setAttribute('fill', '#333'); // 어두운 색
-        glow.setAttribute('opacity', '0'); // 불빛 없음
+        bulb.setAttribute('fill', '#333');
+        statusText.textContent = '꺼짐';
+        statusText.style.color = '#666';
       }
     }
   </script>

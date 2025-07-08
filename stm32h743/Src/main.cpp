@@ -265,10 +265,14 @@ int main(void)
 		}
 		#endif
 		
-		// IoT 제어 명령 전송 (조명 껐다 켰다 테스트)
+		// IoT 제어 명령 전송 (조명과 에어컨 테스트)
 		IoT_SendCommand(IOT_CMD_LIGHT_ON);
 		HAL_Delay(2000);
 		IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+		HAL_Delay(2000);
+		IoT_SendCommand(IOT_CMD_AC_ON);
+		HAL_Delay(2000);
+		IoT_SendCommand(IOT_CMD_AC_OFF);
 		HAL_Delay(2000);
 
 		if(uart1_rx_flag){

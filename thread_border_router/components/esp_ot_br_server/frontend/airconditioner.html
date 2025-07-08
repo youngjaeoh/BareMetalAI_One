@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>Air Conditioner Control</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #111;
+      min-height: 100vh;
+      width: 100vw;
+      overflow-x: hidden;
+    }
+    .top-right-controls {
+      position: absolute;
+      top: 32px;
+      right: 48px;
+      z-index: 10;
+    }
+    .btn {
+      padding: 8px 16px;
+      margin: 0 4px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: bold;
+      opacity: 0.9;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-info { background: #17a2b8; color: white; }
+    .btn-primary { background: #007bff; color: white; }
+    .center-ac {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100vw;
+    }
+    .ac-svg {
+      width: 300px;
+      height: 300px;
+      cursor: pointer;
+      transition: filter 0.3s;
+      filter: drop-shadow(0 0 40px rgba(100, 200, 255, 0.2));
+    }
+    .ac-on {
+      filter: drop-shadow(0 0 80px #64c8ff) drop-shadow(0 0 40px #64c8ff);
+    }
+    .ac-off {
+      filter: drop-shadow(0 0 10px #222);
+    }
+    .device-label {
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 30px;
+    }
+    .status-text {
+      color: #64c8ff;
+      font-size: 18px;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="top-right-controls">
+    <button class="btn btn-info" onclick="controlAC('on')">에어컨 켜기</button>
+    <button class="btn btn-info" onclick="controlAC('off')">에어컨 끄기</button>
+    <button class="btn btn-primary" onclick="refreshStatus()">새로고침</button>
+  </div>
+  
+  <div class="center-ac">
+    <svg id="ac" class="ac-svg ac-off" viewBox="0 0 300 300" width="300" height="300" onclick="toggleAC()">
+      <!-- 에어컨 본체 -->
+      <rect x="40" y="60" width="220" height="120" fill="#444" rx="12" />
+      <!-- 에어컨 그릴 -->
+      <rect x="50" y="70" width="200" height="100" fill="#666" rx="8" />
+      <!-- 바람 구멍들 (더 많은 구멍) -->
+      <circle cx="70" cy="90" r="4" fill="#999" />
+      <circle cx="90" cy="90" r="4" fill="#999" />
+      <circle cx="110" cy="90" r="4" fill="#999" />
+      <circle cx="130" cy="90" r="4" fill="#999" />
+      <circle cx="150" cy="90" r="4" fill="#999" />
+      <circle cx="170" cy="90" r="4" fill="#999" />
+      <circle cx="190" cy="90" r="4" fill="#999" />
+      <circle cx="210" cy="90" r="4" fill="#999" />
+      <circle cx="70" cy="110" r="4" fill="#999" />
+      <circle cx="90" cy="110" r="4" fill="#999" />
+      <circle cx="110" cy="110" r="4" fill="#999" />
+      <circle cx="130" cy="110" r="4" fill="#999" />
+      <circle cx="150" cy="110" r="4" fill="#999" />
+      <circle cx="170" cy="110" r="4" fill="#999" />
+      <circle cx="190" cy="110" r="4" fill="#999" />
+      <circle cx="210" cy="110" r="4" fill="#999" />
+      <circle cx="70" cy="130" r="4" fill="#999" />
+      <circle cx="90" cy="130" r="4" fill="#999" />
+      <circle cx="110" cy="130" r="4" fill="#999" />
+      <circle cx="130" cy="130" r="4" fill="#999" />
+      <circle cx="150" cy="130" r="4" fill="#999" />
+      <circle cx="170" cy="130" r="4" fill="#999" />
+      <circle cx="190" cy="130" r="4" fill="#999" />
+      <circle cx="210" cy="130" r="4" fill="#999" />
+      <!-- 에어컨 표시등 -->
+      <circle id="ac-indicator" cx="270" cy="90" r="8" fill="#333" />
+      <!-- 온도 표시 -->
+      <text x="150" y="200" text-anchor="middle" fill="#64c8ff" font-size="16" font-weight="bold">22°C</text>
+    </svg>
+    <div class="device-label">에어컨</div>
+    <div id="status-text" class="status-text">꺼짐</div>
+  </div>
+
+  <script>
+    let acStatus = false;
+    let updateInterval;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      refreshStatus();
+      updateInterval = setInterval(refreshStatus, 2000);
+    });
+
+    function toggleAC() {
+      controlAC(!acStatus ? 'on' : 'off');
+    }
+
+    function controlAC(action) {
+      fetch('/ac/control', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: action})
+      })
+      .then(() => {
+        refreshStatus();
+      });
+    }
+
+    function refreshStatus() {
+      fetch('/ac/status')
+      .then(response => response.json())
+      .then(data => {
+        acStatus = data.status;
+        updateACDisplay(acStatus);
+      });
+    }
+
+    function updateACDisplay(isOn) {
+      const ac = document.getElementById('ac');
+      const indicator = document.getElementById('ac-indicator');
+      const statusText = document.getElementById('status-text');
+      
+      if (isOn) {
+        ac.classList.remove('ac-off');
+        ac.classList.add('ac-on');
+        indicator.setAttribute('fill', '#64c8ff');
+        statusText.textContent = '켜짐';
+        statusText.style.color = '#64c8ff';
+      } else {
+        ac.classList.remove('ac-on');
+        ac.classList.add('ac-off');
+        indicator.setAttribute('fill', '#333');
+        statusText.textContent = '꺼짐';
+        statusText.style.color = '#666';
+      }
+    }
+  </script>
+</body>
+</html> 

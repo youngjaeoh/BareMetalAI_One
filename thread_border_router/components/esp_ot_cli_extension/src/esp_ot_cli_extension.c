@@ -40,6 +40,21 @@ static otError esp_openthread_process_light_off(void *aContext, uint8_t aArgsLen
     return OT_ERROR_NONE;
 }
 
+// Air Conditioner control command handlers
+static otError esp_openthread_process_ac_on(void *aContext, uint8_t aArgsLength, char *aArgs[])
+{
+    ESP_LOGI("CLI", "Air Conditioner ON command received");
+    update_ac_status(true);
+    return OT_ERROR_NONE;
+}
+
+static otError esp_openthread_process_ac_off(void *aContext, uint8_t aArgsLength, char *aArgs[])
+{
+    ESP_LOGI("CLI", "Air Conditioner OFF command received");
+    update_ac_status(false);
+    return OT_ERROR_NONE;
+}
+
 static const otCliCommand kCommands[] = {
     {"curl", esp_openthread_process_curl},
 #if CONFIG_OPENTHREAD_DNS64_CLIENT
@@ -71,6 +86,8 @@ static const otCliCommand kCommands[] = {
 #endif // CONFIG_OPENTHREAD_CLI_WIFI
     {"light_on", esp_openthread_process_light_on},
     {"light_off", esp_openthread_process_light_off},
+    {"ac_on", esp_openthread_process_ac_on},
+    {"ac_off", esp_openthread_process_ac_off},
 };
 
 void esp_cli_custom_command_init()

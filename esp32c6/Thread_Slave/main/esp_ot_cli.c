@@ -68,6 +68,7 @@
 
 // 전등 상태를 저장하는 전역 변수
 static bool light_status = false;
+static bool ac_status = false;
 
 #define BORDER_ROUTER_THREAD_ADDR "fd39:9080:bc00:1:9859:137a:d8d0:ffd9" // 실제 Border Router Thread IPv6 주소로 교체 필요
 #define BORDER_ROUTER_UDP_PORT 80
@@ -287,6 +288,36 @@ static void spi_slave_task(void *pvParameters)
                                         ESP_LOGI(TAG, "Thread network ready, sending light_off command via UDP");
                                         send_light_command("light_off");
                                         ESP_LOGI(TAG, "Light OFF command sent to Border Router via UDP");
+                                    } else {
+                                        ESP_LOGW(TAG, "Thread network not ready (role: %d), command queued", role);
+                                    }
+                                }
+                            } else if (strstr(received_data, "airconditioner on") != NULL) {
+                                ac_status = true;
+                                ESP_LOGI(TAG, "Air Conditioner turned ON");
+                                otInstance *ot_instance = esp_openthread_get_instance();
+                                if (ot_instance) {
+                                    otDeviceRole role = otThreadGetDeviceRole(ot_instance);
+                                    ESP_LOGI(TAG, "Current Thread role: %d", role);
+                                    if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER) {
+                                        ESP_LOGI(TAG, "Thread network ready, sending ac_on command via UDP");
+                                        send_light_command("ac_on");
+                                        ESP_LOGI(TAG, "AC ON command sent to Border Router via UDP");
+                                    } else {
+                                        ESP_LOGW(TAG, "Thread network not ready (role: %d), command queued", role);
+                                    }
+                                }
+                            } else if (strstr(received_data, "airconditioner off") != NULL) {
+                                ac_status = false;
+                                ESP_LOGI(TAG, "Air Conditioner turned OFF");
+                                otInstance *ot_instance = esp_openthread_get_instance();
+                                if (ot_instance) {
+                                    otDeviceRole role = otThreadGetDeviceRole(ot_instance);
+                                    ESP_LOGI(TAG, "Current Thread role: %d", role);
+                                    if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER) {
+                                        ESP_LOGI(TAG, "Thread network ready, sending ac_off command via UDP");
+                                        send_light_command("ac_off");
+                                        ESP_LOGI(TAG, "AC OFF command sent to Border Router via UDP");
                                     } else {
                                         ESP_LOGW(TAG, "Thread network not ready (role: %d), command queued", role);
                                     }
