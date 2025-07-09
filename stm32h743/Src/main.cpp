@@ -43,6 +43,19 @@
 #include "iq_data_converter.h"
 #include "iq_signal_processing.h"
 #include "movement_detection.h"
+
+// TensorFlow Lite
+#include "tensorflow/lite/core/c/common.h"
+#include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/micro/micro_log.h"
+#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
+#include "tensorflow/lite/micro/recording_micro_interpreter.h"
+#include "tensorflow/lite/micro/system_setup.h"
+#include "tensorflow/lite/schema/schema_generated.h"
+#include "tensorflow/lite/micro/micro_profiler.h"
+
+// Model
+#include "models/models_tflite_model_qat_model_tflite.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -83,6 +96,10 @@ FloatQueue q_data_queue; // Q Data Queue
 enum wakeup_mode { SLEEP_MODE, WAKEUP_MODE, FRENZY_MODE } current_mode = SLEEP_MODE; // false : sleep mode, true : wakeup mode
 bool alarm_flag = true; // alarm flag
 uint32_t wakeup_time = 1800000; // 
+
+// Tensor arena - 메모리 부족 문제 해결을 위해 크기 증가
+constexpr int tensor_arena_size = 1024*4;  // 1KB -> 4KB로 증가
+static uint8_t tensor_arena[tensor_arena_size];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -101,6 +118,9 @@ void SystemClock_Config(void);
 
 // IoT 제어 함수들
 void IoT_SendCommand(const char* command);
+
+// TensorFlow Lite 함수들
+int Get_Top_Prediction(const float* predictions, int num_categories);
 
 /* USER CODE END PFP */
 
@@ -198,6 +218,12 @@ int main(void)
 	MX_SPI3_Init();
 	UART_Init();
 
+	// 중요: IQ 신호처리 모듈 초기화 - 이게 없으면 HARD_FAULT 발생!
+	IQ_SignalProcessing_Init();
+	
+	// 중요: Movement detection 초기화
+	Movement_Detection_Init();
+
 	GPIO_InitTypeDef GPIO_InitStruct = {0};
 	GPIO_InitStruct.Pin = GPIO_PIN_15;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -211,12 +237,43 @@ int main(void)
 	queue_init(&uart2_rx_queue);
 	float_queue_init(&i_data_queue);
 	float_queue_init(&q_data_queue);
+
+	//model initialization
+	const tflite::Model* model = ::tflite::GetModel(models_tflite_model_qat_model_tflite);
+	if (model->version() != TFLITE_SCHEMA_VERSION) {
+		for(;;);
+	}
 	
-	// 중요: IQ 신호처리 모듈 초기화 - 이게 없으면 HARD_FAULT 발생!
-	IQ_SignalProcessing_Init();
+	tflite::MicroMutableOpResolver<4> micro_op_resolver;
+
+	micro_op_resolver.AddDequantize();
+	micro_op_resolver.AddFullyConnected();
+	micro_op_resolver.AddQuantize();
+	micro_op_resolver.AddSoftmax();
+
+	tflite::MicroInterpreter interpreter(model, micro_op_resolver, tensor_arena, tensor_arena_size);
 	
-	// 중요: Movement detection 초기화
-	Movement_Detection_Init();
+	sprintf((char *)&text, "Tensor Arena Size: %d bytes\n\r", tensor_arena_size);
+	UART_Send_String((char*)text);
+	
+	if(interpreter.AllocateTensors() != kTfLiteOk){
+		sprintf((char *)&text, "TFLM Allocate Tensor Failed!!");
+		UART_Send_String((char*)text);
+		
+		// 추가 디버그 정보
+		sprintf((char *)&text, "Arena used: %d bytes\n\r", interpreter.arena_used_bytes());
+		UART_Send_String((char*)text);
+		while(1);
+	}
+
+	sprintf((char *)&text, "Tensor Arena used : %d\n\r", interpreter.arena_used_bytes());
+	UART_Send_String((char*)text);
+	TfLiteTensor* input = interpreter.input(0);
+	sprintf((char *)&text, "Input_Shape : (%d,%d)\n\r", input->dims->data[0], input->dims->data[1]) ;
+	UART_Send_String((char*)text);
+	sprintf((char *)&text, "Input_Size : %d elements\n\r", input->dims->data[1]);
+	UART_Send_String((char*)text);
+
 
 	#ifdef USE_UART3
 	// Initialize Data Transmission/Reception module
@@ -226,8 +283,8 @@ int main(void)
 	uint8_t test_mode = 0; // 0: Ping-Pong test, 1: Flag-based data transmission
 	uint32_t mode_switch_time = HAL_GetTick();
 	#endif
-	uint32_t start_time = HAL_GetTick();
-	Thread_SPI_Packet_t received_packet;
+	// uint32_t start_time = HAL_GetTick();  // 사용하지 않으므로 주석 처리
+	// Thread_SPI_Packet_t received_packet;  // 사용하지 않으므로 주석 처리
 
 	ST7735_LCD_Driver.FillRect(&st7735_pObj, 0, 0, ST7735Ctx.Width, ST7735Ctx.Height, BLACK);
 
@@ -307,6 +364,34 @@ int main(void)
 				float movement_level = Movement_CalculateLevel(&i_data_queue, &q_data_queue);
 				sprintf((char*)text, "Movement Level: %.6f\r\n", movement_level);
 				UART_Send_String((char*)text);
+				
+				// 입력 텐서 크기 확인 후 안전하게 설정
+				int input_size = input->dims->data[1];
+				if (input_size >= 3) {
+					input->data.f[0] = movement_level;        // Movement level
+					input->data.f[1] = quality.final_quality; // Quality score
+					input->data.f[2] = quality.phase_std;     // Phase std
+				} else if (input_size >= 2) {
+					input->data.f[0] = movement_level;        // Movement level
+					input->data.f[1] = quality.final_quality; // Quality score
+				} else if (input_size >= 1) {
+					input->data.f[0] = movement_level;        // Movement level only
+				}
+				// Run the model
+				uint32_t time_start_invoke = HAL_GetTick();
+				if(interpreter.Invoke() != kTfLiteOk){
+					sprintf((char *)&text, "TFLM Invoke Failed!!\r\n");
+					UART_Send_String((char*)text);
+					while(1);
+				}
+				uint32_t time_end_invoke = HAL_GetTick();
+				sprintf((char *)&text, "invoke : %lums\n\r",(unsigned long)(time_end_invoke - time_start_invoke));
+				UART_Send_String((char*)text);
+
+				TfLiteTensor* output = interpreter.output(0);
+				int top_prediction = Get_Top_Prediction(output->data.f, output->dims->data[1]);
+				sprintf((char *)&text, "Top Prediction: %d\r\n", top_prediction);
+				UART_Send_String((char*)text);
 			}
 			else{
 				continue;
@@ -351,6 +436,20 @@ int main(void)
 		#endif
 	}
 	/* USER CODE END 2 */
+}
+
+int Get_Top_Prediction(const float* predictions, int num_categories) {
+	float max_score = predictions[0];
+	int guess = 0;
+
+	for (int category_index = 1; category_index < num_categories; category_index++) {
+		const float category_score = predictions[category_index];
+		if (category_score > max_score) {
+			max_score = category_score;
+			guess = category_index;
+		}
+	}
+	return guess;
 }
 
 /**

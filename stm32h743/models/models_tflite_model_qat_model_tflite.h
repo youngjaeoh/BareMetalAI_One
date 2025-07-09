@@ -1,0 +1,2 @@
+extern const unsigned char models_tflite_model_qat_model_tflite[];
+extern const unsigned int models_tflite_model_qat_model_tflite_len;
