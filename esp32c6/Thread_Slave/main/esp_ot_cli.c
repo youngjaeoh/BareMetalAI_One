@@ -247,22 +247,15 @@ static void spi_slave_task(void *pvParameters)
                 uint8_t length = recvbuf[header_idx + 2];
                 if (header_idx + 3 + length < SPI_BUFFER_SIZE) {
                     if (check_packet_checksum((uint8_t*)recvbuf, header_idx, length)) {
-                        // printf("[SPI] Checksum OK!\n");
-                        // printf("[SPI] Received ASCII: [%02X %02X %02X] ", (uint8_t)recvbuf[header_idx], (uint8_t)recvbuf[header_idx+1], (uint8_t)recvbuf[header_idx+2]);
-                        // for (int i = header_idx + 3; i < header_idx + 3 + length; i++) {
-                        //     char c = recvbuf[i];
-                        //     printf("%c", (c >= 32 && c <= 126) ? c : '.');
-                        // }
-                        // printf("\n");
-                        
+
                         // IoT 명령 처리
                         if (length > 0) {
                             char received_data[64];
                             memcpy(received_data, &recvbuf[header_idx + 3], length);
                             received_data[length] = '\0';
-                            
+
                             ESP_LOGI(TAG, "Received data: %s", received_data);
-                            
+
                             // "light on" 또는 "light off" 명령 처리
                             if (strstr(received_data, "light on") != NULL) {
                                 light_status = true;
@@ -272,9 +265,9 @@ static void spi_slave_task(void *pvParameters)
                                     otDeviceRole role = otThreadGetDeviceRole(ot_instance);
                                     ESP_LOGI(TAG, "Current Thread role: %d", role);
                                     if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER) {
-                                        ESP_LOGI(TAG, "Thread network ready, sending light_on command via UDP");
+                                        ESP_LOGI(TAG, "Thread network ready, sending light_on command");
                                         send_light_command("light_on");
-                                        ESP_LOGI(TAG, "Light ON command sent to Border Router via UDP");
+                                        ESP_LOGI(TAG, "Light ON command sent to Border Router");
                                     } else {
                                         ESP_LOGW(TAG, "Thread network not ready (role: %d), command queued", role);
                                     }
@@ -287,9 +280,9 @@ static void spi_slave_task(void *pvParameters)
                                     otDeviceRole role = otThreadGetDeviceRole(ot_instance);
                                     ESP_LOGI(TAG, "Current Thread role: %d", role);
                                     if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER) {
-                                        ESP_LOGI(TAG, "Thread network ready, sending light_off command via UDP");
+                                        ESP_LOGI(TAG, "Thread network ready, sending light_off command");
                                         send_light_command("light_off");
-                                        ESP_LOGI(TAG, "Light OFF command sent to Border Router via UDP");
+                                        ESP_LOGI(TAG, "Light OFF command sent to Border Router");
                                     } else {
                                         ESP_LOGW(TAG, "Thread network not ready (role: %d), command queued", role);
                                     }
@@ -302,9 +295,9 @@ static void spi_slave_task(void *pvParameters)
                                     otDeviceRole role = otThreadGetDeviceRole(ot_instance);
                                     ESP_LOGI(TAG, "Current Thread role: %d", role);
                                     if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER) {
-                                        ESP_LOGI(TAG, "Thread network ready, sending ac_on command via UDP");
+                                        ESP_LOGI(TAG, "Thread network ready, sending ac_on command");
                                         send_light_command("ac_on");
-                                        ESP_LOGI(TAG, "AC ON command sent to Border Router via UDP");
+                                        ESP_LOGI(TAG, "AC ON command sent to Border Router");
                                     } else {
                                         ESP_LOGW(TAG, "Thread network not ready (role: %d), command queued", role);
                                     }
@@ -317,9 +310,9 @@ static void spi_slave_task(void *pvParameters)
                                     otDeviceRole role = otThreadGetDeviceRole(ot_instance);
                                     ESP_LOGI(TAG, "Current Thread role: %d", role);
                                     if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER) {
-                                        ESP_LOGI(TAG, "Thread network ready, sending ac_off command via UDP");
+                                        ESP_LOGI(TAG, "Thread network ready, sending ac_off command");
                                         send_light_command("ac_off");
-                                        ESP_LOGI(TAG, "AC OFF command sent to Border Router via UDP");
+                                        ESP_LOGI(TAG, "AC OFF command sent to Border Router");
                                     } else {
                                         ESP_LOGW(TAG, "Thread network not ready (role: %d), command queued", role);
                                     }
@@ -332,9 +325,9 @@ static void spi_slave_task(void *pvParameters)
                                     otDeviceRole role = otThreadGetDeviceRole(ot_instance);
                                     ESP_LOGI(TAG, "Current Thread role: %d", role);
                                     if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER) {
-                                        ESP_LOGI(TAG, "Thread network ready, sending tv_on command via UDP");
+                                        ESP_LOGI(TAG, "Thread network ready, sending tv_on command");
                                         send_light_command("tv_on");
-                                        ESP_LOGI(TAG, "TV ON command sent to Border Router via UDP");
+                                        ESP_LOGI(TAG, "TV ON command sent to Border Router");
                                     } else {
                                         ESP_LOGW(TAG, "Thread network not ready (role: %d), command queued", role);
                                     }
@@ -347,9 +340,9 @@ static void spi_slave_task(void *pvParameters)
                                     otDeviceRole role = otThreadGetDeviceRole(ot_instance);
                                     ESP_LOGI(TAG, "Current Thread role: %d", role);
                                     if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER) {
-                                        ESP_LOGI(TAG, "Thread network ready, sending tv_off command via UDP");
+                                        ESP_LOGI(TAG, "Thread network ready, sending tv_off command");
                                         send_light_command("tv_off");
-                                        ESP_LOGI(TAG, "TV OFF command sent to Border Router via UDP");
+                                        ESP_LOGI(TAG, "TV OFF command sent to Border Router");
                                     } else {
                                         ESP_LOGW(TAG, "Thread network not ready (role: %d), command queued", role);
                                     }
@@ -362,9 +355,9 @@ static void spi_slave_task(void *pvParameters)
                                     otDeviceRole role = otThreadGetDeviceRole(ot_instance);
                                     ESP_LOGI(TAG, "Current Thread role: %d", role);
                                     if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER) {
-                                        ESP_LOGI(TAG, "Thread network ready, sending speaker_on command via UDP");
+                                        ESP_LOGI(TAG, "Thread network ready, sending speaker_on command");
                                         send_light_command("speaker_on");
-                                        ESP_LOGI(TAG, "Speaker ON command sent to Border Router via UDP");
+                                        ESP_LOGI(TAG, "Speaker ON command sent to Border Router");
                                     } else {
                                         ESP_LOGW(TAG, "Thread network not ready (role: %d), command queued", role);
                                     }
@@ -377,9 +370,9 @@ static void spi_slave_task(void *pvParameters)
                                     otDeviceRole role = otThreadGetDeviceRole(ot_instance);
                                     ESP_LOGI(TAG, "Current Thread role: %d", role);
                                     if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER) {
-                                        ESP_LOGI(TAG, "Thread network ready, sending speaker_off command via UDP");
+                                        ESP_LOGI(TAG, "Thread network ready, sending speaker_off command");
                                         send_light_command("speaker_off");
-                                        ESP_LOGI(TAG, "Speaker OFF command sent to Border Router via UDP");
+                                        ESP_LOGI(TAG, "Speaker OFF command sent to Border Router");
                                     } else {
                                         ESP_LOGW(TAG, "Thread network not ready (role: %d), command queued", role);
                                     }

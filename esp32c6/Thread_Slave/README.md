@@ -1,132 +1,118 @@
-| Supported Targets | ESP32-C6 | ESP32-H2 |
-| ----------------- | -------- | -------- |
+# ESP32C6 Thread Slave
 
-# OpenThread Command Line Example
+<aside>
 
-This example demonstrates an [OpenThread CLI](https://github.com/openthread/openthread/blob/master/src/cli/README.md), with some additional features such as TCP, UDP and Iperf.
+💡 **프로젝트 개요**
 
-## How to use example
+STM32는 Master로, ESP32C6는 Slave로 설정되어 있습니다.
 
-### Hardware Required
+STM32에서 ESP32C6로 SPI를 통해 IoT 제어 명령을 전송하고, ESP32C6는 Thread 네트워크를 통해 Border Router로 명령을 전달합니다.
 
-To run this example, a board with IEEE 802.15.4 module (for example ESP32-H2) is required.
+지원하는 IoT 명령:
+- `light on/off` - 조명 제어
+- `airconditioner on/off` - 에어컨 제어  
+- `tv on/off` - TV 제어
+- `speaker on/off` - 스피커 제어
 
-### Configure the project
+</aside>
 
-```
-idf.py menuconfig
-```
+## 1. 빌드 환경 설정
 
-The example can run with the default configuration. OpenThread Command Line is enabled with UART as the default interface. Additionally, USB JTAG is also supported and can be activated through the menuconfig:
-
-```
-Component config → ESP System Settings → Channel for console output → USB Serial/JTAG Controller
-```
-
-### Build, Flash, and Run
-
-Build the project and flash it to the board, then run monitor tool to view serial output:
-
-```
-idf.py -p PORT build flash monitor
-```
-
-Now you'll get an OpenThread command line shell.
-
-### Example Output
-
-The `help` command will print all of the supported commands.
 ```bash
->  help
-I(7058) OPENTHREAD:[INFO]-CLI-----: execute command: help
-bbr
-bufferinfo
-ccathreshold
-channel
-child
-childip
-childmax
-childsupervision
-childtimeout
-coap
-contextreusedelay
-counters
-dataset
-delaytimermin
-diag
-discover
-dns
-domainname
-eidcache
-eui64
-extaddr
-extpanid
-factoryreset
-...
+$ git clone --recursive https://github.com/espressif/esp-idf.git
+$ cd esp-idf
+esp-idf$ git checkout v5.2.4
+esp-idf$ git submodule update --init --depth 1
+esp-idf$ ./install.ps1
+esp-idf$ ./export.ps1
 ```
 
-## Set Up Network
+- `.export.ps1`은 터미널을 새로 열 때마다 실행해야 합니다
+- `idf.py` 명령어를 사용하여 코드를 빌드할 수 있게 해줍니다
 
-To run this example, at least two ESP32-H2 boards flashed with this ot_cli example are required.
+## 2. 빌드 타겟 설정
 
-On the first device, run the following commands:
 ```bash
-> factoryreset
-... # the device will reboot
+$ cd BareMetalAI_One\esp32c6\Thread_Slave
+Thread_Slave$ idf.py set-target esp32c6
+```
 
-> dataset init new
-Done
-> dataset commit active
-Done
+## 3. 프로젝트 빌드
+
+```bash
+Thread_Slave$ idf.py build
+```
+
+## 4. 펌웨어 플래시
+
+```bash
+Thread_Slave$ idf.py -p COM5 flash
+```
+
+- `COM5`는 장치 관리자에서 확인한 실제 연결된 ESP32-C6의 포트 번호입니다
+
+## 5. 모니터링 진입 & Thread Start
+
+```bash
+Thread_Slave$ idf.py -p COM5 monitor
+> datset set active [ESP Thread Border Router의 dataset]
 > ifconfig up
-Done
 > thread start
-Done
 
-# After some seconds
-
-> state
-leader
-Done
-```
-Now the first device has formed a Thread network as a leader. Get some information which will be used in next steps:
-```bash
-> ipaddr
-fdde:ad00:beef:0:0:ff:fe00:fc00
-fdde:ad00:beef:0:0:ff:fe00:8000
-fdde:ad00:beef:0:a7c6:6311:9c8c:271b
-fe80:0:0:0:5c27:a723:7115:c8f8
-
-# Get the Active Dataset
-> dataset active -x
-0e080000000000010000000300001835060004001fffe00208fe7bb701f5f1125d0708fd75cbde7c6647bd0510b3914792d44f45b6c7d76eb9306eec94030f4f70656e5468726561642d35383332010258320410e35c581af5029b054fc904a24c2b27700c0402a0fff8
 ```
 
-On the second device, set the active dataset from leader, and start Thread interface:
-```bash
-> factoryreset
-... # the device will reboot
+- ESP Thread Border Router에 연결합니다
+- `> state` 실행 시 child 혹은 router가 출력되면 성공입니다
 
-> dataset set active 0e080000000000010000000300001835060004001fffe00208fe7bb701f5f1125d0708fd75cbde7c6647bd0510b3914792d44f45b6c7d76eb9306eec94030f4f70656e5468726561642d35383332010258320410e35c581af5029b054fc904a24c2b27700c0402a0fff8
-> ifconfig up
-Done
-> thread start
-Done
 
-# After some seconds
+## 6. 하드웨어 연결
 
-> state
-router  # child is also a valid state
-Done
+### SPI 핀 연결 (ESP32C6 ↔ STM32)
+
+| ESP32C6 핀 | STM32 핀 | 기능 |
+|------------|----------|------|
+| GPIO 18 (D10) | PC12 | MOSI |
+| GPIO 20 (D9) | PC11 | MISO |
+| GPIO 19 (D8) | PC10 | SCLK |
+| GPIO 17 (D7) | PA15 | CS |
+- GND와 3.3v도 연결되어야 합니다.
+
+## 7. 동작 방식
+
+1. **SPI 통신**: STM32가 ESP32C6로 IoT 명령을 SPI를 통해 전송
+2. **명령 처리**: ESP32C6가 받은 명령을 파싱하고 내부 상태 업데이트
+3. **Thread 네트워크**: ESP32C6가 Thread 네트워크에 연결되어 있는지 확인
+4. **UDP 전송**: Thread 네트워크가 준비되면 Border Router로 명령 전송
+
+## 8. CLI 명령어 (Optional, STM이 자동 제어)
+
+프로젝트가 실행되면 다음과 같은 CLI 명령어를 사용할 수 있습니다:
+
+- `light_on <light_id>` - 특정 조명 켜기 (예: `light_on 1`)
+- `light_off <light_id>` - 특정 조명 끄기 (예: `light_off 1`)
+
+## 9. 로그 확인
+
+모니터링 중에 다음과 같은 로그를 확인할 수 있습니다:
+
 ```
-The second device has joined the Thread network as a router (or a child).
+I (1234) ot_esp_cli: Received data: light on
+I (1234) ot_esp_cli: Light turned ON
+I (1234) ot_esp_cli: Current Thread role: 2
+I (1234) ot_esp_cli: Thread network ready, sending light_on command
+I (1234) ot_esp_cli: Light ON command sent to Border Router
+```
 
-## Extension commands
+## 10. 문제 해결
 
-You can refer to the [extension command](https://github.com/espressif/esp-thread-br/blob/main/components/esp_ot_cli_extension/README.md) about the extension commands.
+### Thread 네트워크 연결 문제
+- ESP32C6가 Thread 네트워크에 제대로 연결되지 않으면 명령이 전송되지 않습니다
+- `state` 명령어로 Thread 상태를 확인하세요
 
-The following examples are supported by `ot_cli`:
+### SPI 통신 문제  
+- 핀 연결을 다시 확인하세요
+- STM32의 SPI 설정이 ESP32C6와 일치하는지 확인하세요
 
-* TCP and UDP Example
-* Iperf Example
-
+### 빌드 오류
+- ESP-IDF 버전이 v5.2.4인지 확인하세요
+- `idf.py clean` 후 다시 빌드해보세요
