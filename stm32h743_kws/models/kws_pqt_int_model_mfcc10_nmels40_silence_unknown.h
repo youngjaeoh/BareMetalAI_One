@@ -1,0 +1,3 @@
+
+extern unsigned char kws_pqt_int_model_mfcc10_nmels40_silence_unknown[] ;
+extern unsigned int len_kws_pqt_int_model_mfcc10_nmels40_silence_unknown ;
