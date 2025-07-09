@@ -168,9 +168,6 @@ void LED_Blink(uint32_t Hdelay, uint32_t Ldelay)
 }
 /* USER CODE END 0 */
 
-// Ping-Pong 테스트 루프 함수 분리
-void PingPongTestLoop(void);
-
 /**
  * @brief  The application entry point.
  * @retval int
@@ -422,46 +419,6 @@ void assert_failed(uint8_t *file, uint32_t line)
 #endif /* USE_FULL_ASSERT */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
-
-void PingPongTestLoop(void)
-{
-	while (1)
-	{
-		Thread_SPI_UpdateUptime();
-
-		// Ping
-		LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"Ping Testing...");
-		UART_Send_String("--- Starting SPI transaction ---\r\n");
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
-		UART_Send_String("Sending PING data...\r\n");
-		HAL_StatusTypeDef ping3_result = Thread_SPI_SendPing(&hspi3);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
-		UART_Send_String("--- SPI transaction completed ---\r\n");
-
-		if (ping3_result == HAL_OK) {
-			UART_Send_String("SPI3: Ping sent, check ESP32C6 for Pong!\r\n");
-		} else {
-			UART_Send_String("SPI3: Ping failed!\r\n");
-		}
-		HAL_Delay(100);
-
-		// Pong
-		LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"Pong Testing...");
-		Thread_SPI_Packet_t rx_packet;
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
-		HAL_StatusTypeDef pong_result = Thread_SPI_ReceivePacket(&hspi3, &rx_packet);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
-
-		if (pong_result == HAL_OK && rx_packet.header == 0xA5 && rx_packet.command == 0x04 && rx_packet.length == 0) {
-			char buf[64];
-			snprintf(buf, sizeof(buf), "SPI3: PONG received! 0x%02X 0x%02X 0x%02X\r\n", rx_packet.header, rx_packet.command, rx_packet.length);
-			UART_Send_String(buf);
-		} else {
-			UART_Send_String("SPI3: Pong receive failed or invalid packet!\r\n");
-		}
-		HAL_Delay(2000);
-	}
-}
 
 // IoT 제어 함수들 구현
 void IoT_SendCommand(const char* command)
