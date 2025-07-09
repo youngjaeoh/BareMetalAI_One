@@ -93,15 +93,6 @@ void DataTransReceive_PingPongTest(void)
     
     is_ping_pong_mode = 1;
     
-    // Debug: Print current board mode
-    static uint32_t last_debug_time = 0;
-    if (current_time - last_debug_time >= 5000) { // Every 5 seconds
-        sprintf(debug_msg, "PingPong: Board %s\r\n", 
-                (current_board_mode == BOARD_A) ? "A (Master)" : "B (Slave)");
-        UART_Send_String(debug_msg);
-        last_debug_time = current_time;
-    }
-    
     // Process received packets
     if (ReceivePacket(&packet) == HAL_OK) {
         if (packet.msg_type == MSG_PING) {

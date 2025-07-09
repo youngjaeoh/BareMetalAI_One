@@ -33,11 +33,16 @@
 #include <stdint.h>
 
 #include "thread_spi.h"
+// Data Format
 #include "queue.h"
+#include "float_queue.h"
+//IO
 #include "buzzer.h"
-#include "sleepbreathing.h"
 #include "data_trans_receive.h"
-
+// Radar
+#include "iq_data_converter.h"
+#include "iq_signal_processing.h"
+#include "movement_detection.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -71,6 +76,11 @@
 
 /* USER CODE BEGIN PV */
 CircularQueue uart2_rx_queue; // UART Data Buffer
+FloatQueue i_data_queue; // I Data Queue
+FloatQueue q_data_queue; // Q Data Queue
+
+// Main Loop Variables
+enum wakeup_mode { SLEEP_MODE, WAKEUP_MODE, FRENZY_MODE } current_mode = SLEEP_MODE; // false : sleep mode, true : wakeup mode
 bool alarm_flag = true; // alarm flag
 uint32_t wakeup_time = 1800000; // 
 /* USER CODE END PV */
@@ -199,68 +209,109 @@ int main(void)
 	uint8_t text[32];
 	// Initialize UART RX Queues
 	queue_init(&uart2_rx_queue);
+	float_queue_init(&i_data_queue);
+	float_queue_init(&q_data_queue);
+	
+	// 중요: IQ 신호처리 모듈 초기화 - 이게 없으면 HARD_FAULT 발생!
+	IQ_SignalProcessing_Init();
+	
+	// 중요: Movement detection 초기화
+	Movement_Detection_Init();
 
 	#ifdef USE_UART3
 	// Initialize Data Transmission/Reception module
 	DataTransReceive_Init(BOARD_A);  // Change to BOARD_B for slave board
-	
+	SimplePacket_t init_packet = {0};
 	// Test mode selection
 	uint8_t test_mode = 0; // 0: Ping-Pong test, 1: Flag-based data transmission
 	uint32_t mode_switch_time = HAL_GetTick();
 	#endif
-
-	uint32_t test_counter = 0;
+	uint32_t start_time = HAL_GetTick();
 	Thread_SPI_Packet_t received_packet;
-
-	UART_Send_String("Thread IoT SPI Bidirectional Test Started!\r\n");
 
 	ST7735_LCD_Driver.FillRect(&st7735_pObj, 0, 0, ST7735Ctx.Width, ST7735Ctx.Height, BLACK);
 
 	auto clearLine = [](uint16_t y, uint16_t height = 16) {
 		ST7735_LCD_Driver.FillRect(&st7735_pObj, 0, y, ST7735Ctx.Width, height, BLACK);
 	};
+	SignalQuality_t quality = {0};
 
-	// PingPongTestLoop(); // 필요할 때만 호출
-	#ifdef USE_UART2
-	uint8_t data[7] = {0x55, 0x06, 0x00, 0x02, 0x05, 0x0D, 0x01};
-	makechecksum(data, 7); // Create checksum for the data
-	#endif
-
+	CircularQueue test_queue;
+	queue_init(&test_queue);
 	while (1)
-	{
-		LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"Running...");
-		// 테스트용 데이터 생성 (카운터 포함)
-		#ifdef USE_UART3	
-		// Run different test modes
-		if (test_mode == 0) {
-			// Ping-Pong Test Mode
-			DataTransReceive_PingPongTest();
-		} else {
-			// Flag-based Data Transmission Mode
-			SimplePacket_t send_packet = {0};
-			send_packet.start_byte = 0xAA; // 시작 바이트
-			send_packet.msg_type = MSG_FLAG; // 메시지 타입
-			send_packet.data = 0x01; // Flag 데이터
-			send_packet.end_byte = 0x55; // 종료 바이트
-			if(SendPacket(&send_packet) != HAL_OK){
-				LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"Sending Packet error");
-				for(;;); // system halt with error
-			} // Send the packet
-			HAL_Delay(100); // Delay to simulate processing time
-			SimplePacket_t receive_packet = {0};
-			if(ReceivePacket(&receive_packet) == HAL_OK){
-				// Process the received packet
-				if(receive_packet.start_byte == 0xAA && receive_packet.end_byte == 0x55){
-					sprintf((char *)text, "Received Flag: %02X\r\n", receive_packet.data);
-					UART_Send_String((char *)text);
-				} else {
-					UART_Send_String("Invalid Packet Received!\r\n");
-				}
-			} else {
-				UART_Send_String("No Packet Received!\r\n");
+	{	
+		//Check the time basd on user state
+		// uint32_t mode_time = HAL_GetTick() - start_time;
+		// if( mode_time >= wakeup_time) { // 30 minutes
+		// 	if(mode_time+60000 >= wakeup_time){
+		// 		current_mode = FRENZY_MODE;
+		// 	}
+		// 	else{
+		// 		current_mode = WAKEUP_MODE;
+		// 	}
+		// }
+		
+		//Test Data
+		queue_enqueue(&test_queue,0xEE);
+		for(int i=0;i<150;i++){
+			queue_enqueue(&test_queue, i);
+		}
+		queue_enqueue(&test_queue,0XAA);
+
+		// Check the flags ON
+		if(uart1_rx_flag){
+			uart1_rx_flag = 0;
+			sprintf((char *)&text, "Uart1 Rx : %c\r\n", uart1_rx_data);
+			UART_Send_String((char *)text);
+		}
+		
+		#ifdef USE_UART2
+		if(uart2_rx_flag){
+			uart2_rx_flag = 0;
+			if(queue_is_full(&uart2_rx_queue)){
+				sprintf((char *)&text, "Queue Full! Dequeueing...\r\n");
+				UART_Send_String((char *)text);
+				// Dequeue the oldest data if the queue is full
+				queue_dequeue(&uart2_rx_queue);
 			}
-		}	
+		}
 		#endif
+
+		#ifdef USE_UART3
+		if(uart3_rx_flag){
+			uart3_rx_flag = 0;
+			init_packet.start_byte = queue_dequeue(&uart3_rx_queue);
+			init_packet.msg_type = queue_dequeue(&uart3_rx_queue);
+			init_packet.data = queue_dequeue(&uart3_rx_queue);
+			init_packet.end_byte = queue_dequeue(&uart3_rx_queue);
+			sprintf((char *)text, "Uart3 Rx : %02X %02X %02X %02X\r\n", 
+					init_packet.start_byte, init_packet.msg_type, init_packet.data, init_packet.end_byte);
+			UART_Send_String((char *)text);
+			// Process the received packet
+		}
+		#endif
+
+		if(current_mode == SLEEP_MODE){
+			// Process the I and Q data queues
+			if(IQ_ConvertQueueToIQQueues(&test_queue, &i_data_queue, &q_data_queue) != HAL_OK){
+				UART_Send_String("Error converting UART data to I/Q queues\r\n");
+				continue;
+			}
+			if(IQ_CheckIQQueuesReady(&i_data_queue, &q_data_queue) == HAL_OK){
+				if(IQ_ProcessFloatQueues(&i_data_queue, &q_data_queue, &quality) == HAL_OK){
+					sprintf((char *)text, "Phase STD: %.6f, Quality: %.2f\r\n", 
+							quality.phase_std, quality.final_quality);
+					UART_Send_String((char *)text);
+				}
+				//movement detection result
+				float movement_level = Movement_CalculateLevel(&i_data_queue, &q_data_queue);
+				sprintf((char*)text, "Movement Level: %.6f\r\n", movement_level);
+				UART_Send_String((char*)text);
+			}
+			else{
+				continue;
+			}
+		}
 		
 		// IoT 제어 명령 전송 (조명, 에어컨, TV, 스피커 테스트)
 		// IoT_SendCommand(IOT_CMD_LIGHT_ON);
@@ -280,27 +331,6 @@ int main(void)
 		// IoT_SendCommand(IOT_CMD_SPEAKER_OFF);
 		// HAL_Delay(500);
 
-		if(uart1_rx_flag){
-			uart1_rx_flag = 0;
-			sprintf((char *)&text, "Uart1 Rx : %c\r\n", uart1_rx_data);
-			UART_Send_String((char *)text);
-		}
-		HAL_Delay(100);
-
-		// Send the data to mmWave Radar via UART2
-		#ifdef USE_UART2
-		if(uart2_rx_flag){
-			uart2_rx_flag = 0;
-			if(queue_is_full(&uart2_rx_queue)){
-				sprintf((char *)&text, "Queue Full! Dequeueing...\r\n");
-				UART_Send_String((char *)text);
-				// Dequeue the oldest data if the queue is full
-				queue_dequeue(&uart2_rx_queue);
-			}
-		}
-		radar_data_process(&uart2_rx_queue);
-		#endif
-
 		HAL_Delay(100);
 		// Enhanced Buzzer Test - Test every 10 iterations
 		#ifdef USE_BUZZER
@@ -319,8 +349,6 @@ int main(void)
 			}
 		}
 		#endif
-
-		test_counter++;
 	}
 	/* USER CODE END 2 */
 }

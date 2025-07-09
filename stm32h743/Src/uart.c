@@ -146,7 +146,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 
     __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
 
-		HAL_NVIC_SetPriority(USART1_IRQn, 0, 1);
+		HAL_NVIC_SetPriority(USART1_IRQn, 0, 3);
 		HAL_NVIC_EnableIRQ(USART1_IRQn);
 	}
 #ifdef USE_UART2
@@ -160,7 +160,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 
     __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
 
-		HAL_NVIC_SetPriority(USART2_IRQn, 0, 1);
+		HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
 		HAL_NVIC_EnableIRQ(USART2_IRQn);
 	}
 #endif
