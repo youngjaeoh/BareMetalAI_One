@@ -96,6 +96,7 @@ FloatQueue q_data_queue; // Q Data Queue
 enum wakeup_mode { SLEEP_MODE, WAKEUP_MODE, FRENZY_MODE } current_mode = SLEEP_MODE; // false : sleep mode, true : wakeup mode
 bool alarm_flag = true; // alarm flag
 uint32_t wakeup_time = 1800000; // 
+enum user_state {UNKNOWN, SLEEP, AWAKE} current_user_state = UNKNOWN; // 현재 사용자 상태
 
 // Tensor arena - 메모리 부족 문제 해결을 위해 크기 증가
 constexpr int tensor_arena_size = 1024*4;  // 1KB -> 4KB로 증가
@@ -354,19 +355,19 @@ int main(void)
 		if(current_mode == SLEEP_MODE){
 			// Process the I and Q data queues
 			if(IQ_ConvertQueueToIQQueues(&test_queue, &i_data_queue, &q_data_queue) != HAL_OK){
-				UART_Send_String("Error converting UART data to I/Q queues\r\n");
+				// UART_Send_String("Error converting UART data to I/Q queues\r\n");
 				continue;
 			}
 			if(IQ_CheckIQQueuesReady(&i_data_queue, &q_data_queue) == HAL_OK){
 				if(IQ_ProcessFloatQueues(&i_data_queue, &q_data_queue, &quality) == HAL_OK){
-					sprintf((char *)text, "Phase STD: %.6f, Quality: %.2f\r\n", 
-							quality.phase_std, quality.final_quality);
-					UART_Send_String((char *)text);
+					// sprintf((char *)text, "Phase STD: %.6f, Quality: %.2f\r\n", 
+					// 		quality.phase_std, quality.final_quality);
+					// UART_Send_String((char *)text);
 				}
 				//movement detection result
 				float movement_level = Movement_CalculateLevel(&i_data_queue, &q_data_queue);
-				sprintf((char*)text, "Movement Level: %.6f\r\n", movement_level);
-				UART_Send_String((char*)text);
+				//sprintf((char*)text, "Movement Level: %.6f\r\n", movement_level);
+				//UART_Send_String((char*)text);
 				
 				// 입력 텐서 크기 확인 후 안전하게 설정
 				int input_size = input->dims->data[1];
@@ -393,8 +394,8 @@ int main(void)
 
 				TfLiteTensor* output = interpreter.output(0);
 				int top_prediction = Get_Top_Prediction(output->data.f, output->dims->data[1]);
-				sprintf((char *)&text, "Top Prediction: %d\r\n", top_prediction);
-				UART_Send_String((char*)text);
+				// sprintf((char *)&text, "Top Prediction: %d\r\n", top_prediction);
+				// UART_Send_String((char*)text);	
 			}
 			else{
 				continue;
@@ -454,6 +455,8 @@ int Get_Top_Prediction(const float* predictions, int num_categories) {
 	}
 	return guess;
 }
+
+
 
 /**
  * @brief System Clock Configuration
