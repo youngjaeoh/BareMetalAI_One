@@ -337,6 +337,9 @@ int main(void)
 		#ifdef USE_UART3
 		if(uart3_rx_flag){
 			uart3_rx_flag = 0;
+			if(test_mode == 0){
+				DataTransReceive_PingPongTest();
+			}
 			init_packet.start_byte = queue_dequeue(&uart3_rx_queue);
 			init_packet.msg_type = queue_dequeue(&uart3_rx_queue);
 			init_packet.data = queue_dequeue(&uart3_rx_queue);
