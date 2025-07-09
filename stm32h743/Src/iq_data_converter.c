@@ -40,7 +40,7 @@ HAL_StatusTypeDef IQ_ValidateRadarPacket(CircularQueue *input_queue)
     
     // Find start byte
     if(queue_peek(input_queue) != RADAR_START_BYTE) {
-        IQ_PrintDebug("Start byte not found at head", queue_peek(input_queue));
+        // IQ_PrintDebug("Start byte not found at head", queue_peek(input_queue));
         return HAL_ERROR;
     }
 
@@ -64,21 +64,21 @@ HAL_StatusTypeDef IQ_ConvertQueueToIQQueues(CircularQueue *input_queue, FloatQue
     
     // Check if we have enough data for complete packet
     if (queue_size(input_queue) < RADAR_PACKET_SIZE) {
-        IQ_PrintDebug("Not enough data in UART queue", queue_size(input_queue));
+        // IQ_PrintDebug("Not enough data in UART queue", queue_size(input_queue));
         
         // Debug: Show what we have in the queue when size is close to expected
         if (queue_size(input_queue) >= 140) {
             char debug_msg[100];
-            sprintf(debug_msg, "[IQ_CONV] Queue size %lu, expected %d, missing %d bytes\r\n", 
-                    queue_size(input_queue), RADAR_PACKET_SIZE, 
-                    RADAR_PACKET_SIZE - queue_size(input_queue));
-            UART_Send_String(debug_msg);
+            // sprintf(debug_msg, "[IQ_CONV] Queue size %lu, expected %d, missing %d bytes\r\n", 
+            //         queue_size(input_queue), RADAR_PACKET_SIZE, 
+            //         RADAR_PACKET_SIZE - queue_size(input_queue));
+            // UART_Send_String(debug_msg);
             
             // Show first few bytes to check for start byte
             if (queue_size(input_queue) > 0) {
-                sprintf(debug_msg, "[IQ_CONV] First byte: 0x%02X (expected 0x%02X)\r\n", 
-                        queue_peek(input_queue), RADAR_START_BYTE);
-                UART_Send_String(debug_msg);
+                // sprintf(debug_msg, "[IQ_CONV] First byte: 0x%02X (expected 0x%02X)\r\n", 
+                //         queue_peek(input_queue), RADAR_START_BYTE);
+                // UART_Send_String(debug_msg);
             }
         }
         
@@ -88,14 +88,14 @@ HAL_StatusTypeDef IQ_ConvertQueueToIQQueues(CircularQueue *input_queue, FloatQue
     // Read and validate start byte
     uint8_t start_byte = queue_dequeue(input_queue);
     if (start_byte != RADAR_START_BYTE) {
-        IQ_PrintDebug("Invalid start byte", start_byte);
+        // IQ_PrintDebug("Invalid start byte", start_byte);
         return HAL_ERROR;
     }
     
     for (uint32_t sample_idx = 0; sample_idx < IQ_SAMPLES_PER_PACKET; sample_idx++) {
         // Check if we have enough bytes for this sample (3 bytes)
         if (queue_size(input_queue) < 3) {
-            IQ_PrintDebug("UART queue underrun during conversion", sample_idx);
+            // IQ_PrintDebug("UART queue underrun during conversion", sample_idx);
             return HAL_ERROR;
         }
         
@@ -118,19 +118,19 @@ HAL_StatusTypeDef IQ_ConvertQueueToIQQueues(CircularQueue *input_queue, FloatQue
     
     // Read and validate end byte
     if (queue_is_empty(input_queue)) {
-        IQ_PrintDebug("UART queue empty, no end byte", 0);
+        // IQ_PrintDebug("UART queue empty, no end byte", 0);
         return HAL_ERROR;
     }
     
     uint8_t end_byte = queue_dequeue(input_queue);
     if (end_byte != RADAR_END_BYTE) {
-        IQ_PrintDebug("Invalid end byte", end_byte);
+        // IQ_PrintDebug("Invalid end byte", end_byte);
         return HAL_ERROR;
     }
     
     //Debug information
-    IQ_PrintDebug("I float queue count after conversion", float_queue_count(i_queue));
-    IQ_PrintDebug("Q float queue count after conversion", float_queue_count(q_queue));
+    // IQ_PrintDebug("I float queue count after conversion", float_queue_count(i_queue));
+    // IQ_PrintDebug("Q float queue count after conversion", float_queue_count(q_queue));
     
     return HAL_OK;
 }
@@ -151,7 +151,7 @@ HAL_StatusTypeDef IQ_CheckIQQueuesReady(FloatQueue *i_queue, FloatQueue *q_queue
     // Check if both queues have 125 float samples (for signal processing)
     if (float_queue_count(i_queue) >= IQ_SAMPLES_FOR_PROCESSING && 
         float_queue_count(q_queue) >= IQ_SAMPLES_FOR_PROCESSING) {
-        IQ_PrintDebug("I/Q float queues ready for processing", float_queue_count(i_queue));
+        // IQ_PrintDebug("I/Q float queues ready for processing", float_queue_count(i_queue));
         return HAL_OK;
     }
     

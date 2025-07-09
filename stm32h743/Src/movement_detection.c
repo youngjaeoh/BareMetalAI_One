@@ -49,7 +49,7 @@ static float magnitude_buffer[MOVEMENT_PROCESSING_SAMPLES];
 static float filtered_buffer[MOVEMENT_PROCESSING_SAMPLES];
 
 /* Private function prototypes -----------------------------------------------*/
-static void Movement_PrintDebugInfo(const char* message, float value);
+// static void Movement_PrintDebugInfo(const char* message, float value);
 
 /* Public functions ----------------------------------------------------------*/
 
@@ -73,7 +73,7 @@ void Movement_Detection_Init(void)
     memset(filtered_buffer, 0, sizeof(filtered_buffer));
     memset(movement_filter_state, 0, sizeof(movement_filter_state));
     
-    Movement_PrintDebugInfo("Movement Detection Initialized", 0);
+    // Movement_PrintDebugInfo("Movement Detection Initialized", 0);
 }
 
 /**
@@ -92,17 +92,17 @@ float Movement_CalculateLevel(FloatQueue *i_queue, FloatQueue *q_queue)
     // Check if we have enough data (250 samples each)
     if (float_queue_count(i_queue) < MOVEMENT_PROCESSING_SAMPLES || 
         float_queue_count(q_queue) < MOVEMENT_PROCESSING_SAMPLES) {
-        Movement_PrintDebugInfo("Not enough data in queues", float_queue_count(i_queue));
+        // Movement_PrintDebugInfo("Not enough data in queues", float_queue_count(i_queue));
         return 0.0f;
     }
     
-    Movement_PrintDebugInfo("Processing movement level, samples", MOVEMENT_PROCESSING_SAMPLES);
+    // Movement_PrintDebugInfo("Processing movement level, samples", MOVEMENT_PROCESSING_SAMPLES);
     
     // Extract 250 samples from each queue
     for (uint32_t i = 0; i < MOVEMENT_PROCESSING_SAMPLES; i++) {
         if (!float_queue_dequeue(i_queue, &i_data_buffer[i]) ||
             !float_queue_dequeue(q_queue, &q_data_buffer[i])) {
-            Movement_PrintDebugInfo("Failed to dequeue data at sample", i);
+            // Movement_PrintDebugInfo("Failed to dequeue data at sample", i);
             return 0.0f;
         }
     }
@@ -147,7 +147,7 @@ float Movement_CalculateLevel(FloatQueue *i_queue, FloatQueue *q_queue)
     if (normalized_movement > 100.0f) normalized_movement = 100.0f;
     if (normalized_movement < 0.0f) normalized_movement = 0.0f;
     
-    Movement_PrintDebugInfo("Movement level calculated", normalized_movement);
+    // Movement_PrintDebugInfo("Movement level calculated", normalized_movement);
     
     return normalized_movement;
 }

@@ -60,7 +60,7 @@ void IQ_SignalProcessing_Init(void)
     
     if (status != ARM_MATH_SUCCESS) {
         // FFT 초기화 실패시 에러 출력
-        IQ_PrintDebugInfo("FFT Init Failed", (float)status);
+        // IQ_PrintDebugInfo("FFT Init Failed", (float)status);
         return;
     }
     
@@ -72,7 +72,7 @@ void IQ_SignalProcessing_Init(void)
     memset(q_data_buffer, 0, sizeof(q_data_buffer));
     
     // Debug information
-    IQ_PrintDebugInfo("IQ Signal Processing Initialized", 0);
+    // IQ_PrintDebugInfo("IQ Signal Processing Initialized", 0);
 }
 
 /**
@@ -91,17 +91,17 @@ HAL_StatusTypeDef IQ_ProcessFloatQueues(FloatQueue *i_queue, FloatQueue *q_queue
     // Check if we have enough data (250 samples each)
     if (float_queue_count(i_queue) < IQ_PROCESSING_SAMPLES || 
         float_queue_count(q_queue) < IQ_PROCESSING_SAMPLES) {
-        IQ_PrintDebugInfo("Not enough data in queues", float_queue_count(i_queue));
+        // IQ_PrintDebugInfo("Not enough data in queues", float_queue_count(i_queue));
         return HAL_ERROR;
     }
     
-    IQ_PrintDebugInfo("Processing float queues, samples", IQ_PROCESSING_SAMPLES);
+    // IQ_PrintDebugInfo("Processing float queues, samples", IQ_PROCESSING_SAMPLES);
     
     // Extract 250 samples from each queue
     for (uint32_t i = 0; i < IQ_PROCESSING_SAMPLES; i++) {
         if (!float_queue_dequeue(i_queue, &i_data_buffer[i]) ||
             !float_queue_dequeue(q_queue, &q_data_buffer[i])) {
-            IQ_PrintDebugInfo("Failed to dequeue data at sample", i);
+            // IQ_PrintDebugInfo("Failed to dequeue data at sample", i);
             return HAL_ERROR;
         }
     }
@@ -234,8 +234,8 @@ HAL_StatusTypeDef IQ_ProcessFloatQueues(FloatQueue *i_queue, FloatQueue *q_queue
     if (quality->final_quality > 100.0f) quality->final_quality = 100.0f;
     if (quality->final_quality < 0.0f) quality->final_quality = 0.0f;
     
-    IQ_PrintDebugInfo("Phase STD calculated", quality->phase_std);
-    IQ_PrintDebugInfo("Final quality calculated", quality->final_quality);
+    // IQ_PrintDebugInfo("Phase STD calculated", quality->phase_std);
+    // IQ_PrintDebugInfo("Final quality calculated", quality->final_quality);
     
     return HAL_OK;
 }
