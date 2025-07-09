@@ -10,9 +10,9 @@ extern "C"{
 
 /* UART Configuration Defines -----------------------------------------------*/
 // UART2를 사용하려면 아래 주석을 해제하세요
-// #define USE_UART2
+#define USE_UART2
 // UART3를 사용하려면 아래 주석을 해제하세요
-// #define USE_UART3
+#define USE_UART3
 
 /* Private function prototypes -----------------------------------------------*/
 #define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)

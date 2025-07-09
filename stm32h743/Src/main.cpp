@@ -36,6 +36,7 @@
 // Data Format
 #include "queue.h"
 #include "float_queue.h"
+#include "queue_10.h"
 //IO
 #include "buzzer.h"
 #include "data_trans_receive.h"
@@ -78,6 +79,15 @@
 #define IOT_CMD_ALL_ON       "all on"
 #define IOT_CMD_ALL_OFF      "all off"
 
+// 추가 메시지 타입 상수들
+#define MSG_ALARM_FLAG_ON    0x05
+#define MSG_WAKE_UP          0x06
+#define MSG_SNOOZE           0x07
+#define MSG_STANDBY_READY    0x08
+
+// 알람 관련 상수들
+#define WAKE_UP_TIMEOUT      10000  // 10초 후 기상으로 간주
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -91,12 +101,19 @@
 CircularQueue uart2_rx_queue; // UART Data Buffer
 FloatQueue i_data_queue; // I Data Queue
 FloatQueue q_data_queue; // Q Data Queue
+ProbQueue prob_queue; // 최근 10개 예측 확률을 저장하는 큐
 
 // Main Loop Variables
 enum wakeup_mode { SLEEP_MODE, WAKEUP_MODE, FRENZY_MODE } current_mode = SLEEP_MODE; // false : sleep mode, true : wakeup mode
 bool alarm_flag = true; // alarm flag
-uint32_t wakeup_time = 1800000; // 
+uint32_t wakeup_time = 10000; // 10 seconds
 enum user_state {UNKNOWN, SLEEP, AWAKE} current_user_state = UNKNOWN; // 현재 사용자 상태
+int awake_count = 0; // 깨어있는 시간 카운트
+
+// 새로운 알람 관련 변수들
+bool alarm_sent = false; // 알람 플래그 전송 완료 여부
+bool snooze_flag = false; // 스누즈 플래그
+uint32_t test_counter = 0; // 테스트 카운터
 
 // Tensor arena - 메모리 부족 문제 해결을 위해 크기 증가
 constexpr int tensor_arena_size = 1024*4;  // 1KB -> 4KB로 증가
@@ -121,8 +138,7 @@ void SystemClock_Config(void);
 void IoT_SendCommand(const char* command);
 
 // TensorFlow Lite 함수들
-int Get_Top_Prediction(const float* predictions, int num_categories);
-
+int GetSmoothedPrediction(const float* new_probs, ProbQueue* queue);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -238,6 +254,8 @@ int main(void)
 	queue_init(&uart2_rx_queue);
 	float_queue_init(&i_data_queue);
 	float_queue_init(&q_data_queue);
+	// Initialize ProbQueue for storing recent predictions
+	ProbQueue_Init(&prob_queue);
 
 	//model initialization
 	const tflite::Model* model = ::tflite::GetModel(models_tflite_model_qat_model_tflite);
@@ -293,21 +311,21 @@ int main(void)
 		ST7735_LCD_Driver.FillRect(&st7735_pObj, 0, y, ST7735Ctx.Width, height, BLACK);
 	};
 	SignalQuality_t quality = {0};
-
+	uint32_t start_time = HAL_GetTick();
 	CircularQueue test_queue;
 	queue_init(&test_queue);
 	while (1)
 	{	
 		//Check the time basd on user state
-		// uint32_t mode_time = HAL_GetTick() - start_time;
-		// if( mode_time >= wakeup_time) { // 30 minutes
-		// 	if(mode_time+60000 >= wakeup_time){
-		// 		current_mode = FRENZY_MODE;
-		// 	}
-		// 	else{
-		// 		current_mode = WAKEUP_MODE;
-		// 	}
-		// }
+		uint32_t mode_time = HAL_GetTick() - start_time;
+		if( mode_time >= wakeup_time) { // 10 seconds
+			if(mode_time+10000 >= wakeup_time){
+				current_mode = FRENZY_MODE;
+			}
+			else{
+				current_mode = WAKEUP_MODE;
+			}
+		}
 		
 		//Test Data
 		queue_enqueue(&test_queue,0xEE);
@@ -393,13 +411,281 @@ int main(void)
 				UART_Send_String((char*)text);
 
 				TfLiteTensor* output = interpreter.output(0);
-				int top_prediction = Get_Top_Prediction(output->data.f, output->dims->data[1]);
+				int top_prediction = GetSmoothedPrediction(output->data.f, &prob_queue);
 				// sprintf((char *)&text, "Top Prediction: %d\r\n", top_prediction);
 				// UART_Send_String((char*)text);	
+				if(top_prediction == 0){
+					current_user_state = UNKNOWN;
+					awake_count = 0; // Reset awake count
+				}
+				else if(top_prediction == 1){
+					current_user_state = SLEEP;
+					awake_count = 0; // Reset awake count
+				}
+				else if(top_prediction == 2){
+					if(awake_count < 2){
+						awake_count++;
+					}
+					else{
+						current_user_state = AWAKE;
+					}
+					current_user_state = UNKNOWN;
+				}
+				else{
+					continue;
+				}
+				if(current_user_state == SLEEP){
+					IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+					IoT_SendCommand(IOT_CMD_AC_OFF);
+					IoT_SendCommand(IOT_CMD_TV_OFF);
+					IoT_SendCommand(IOT_CMD_SPEAKER_OFF);
+					alarm_flag = true; // Reset alarm flag
+				}
+				else if(current_user_state == AWAKE){
+					alarm_flag = false; // Reset alarm flag
+				}
+				else{
+					alarm_flag = true; // Reset alarm flag
+				}
 			}
 			else{
 				continue;
 			}
+		}
+		else if(current_mode == WAKEUP_MODE){
+			if (alarm_flag) {
+				// (a) Alarm flag가 On일 경우
+				SimplePacket_t packet;
+				packet.start_byte = PACKET_START_BYTE;
+				packet.msg_type = MSG_FLAG;
+				packet.data = 0x01; // 알람 플래그 ON
+				packet.end_byte = PACKET_END_BYTE;
+				
+				SendPacket(&packet);
+				alarm_sent = true; // 알람 플래그 전송 완료
+				// 초기화 - 알람 시작 시간 저장
+				Buzzer_On();
+				if(IQ_ConvertQueueToIQQueues(&test_queue, &i_data_queue, &q_data_queue) != HAL_OK){
+					// UART_Send_String("Error converting UART data to I/Q queues\r\n");
+					continue;
+				}
+				if(IQ_CheckIQQueuesReady(&i_data_queue, &q_data_queue) == HAL_OK){
+					if(IQ_ProcessFloatQueues(&i_data_queue, &q_data_queue, &quality) == HAL_OK){
+					}
+					//movement detection result
+					float movement_level = Movement_CalculateLevel(&i_data_queue, &q_data_queue);
+					
+					// 입력 텐서 크기 확인 후 안전하게 설정
+					int input_size = input->dims->data[1];
+					if (input_size >= 3) {
+						input->data.f[0] = movement_level;        // Movement level
+						input->data.f[1] = quality.final_quality; // Quality score
+						input->data.f[2] = quality.phase_std;     // Phase std
+					} else if (input_size >= 2) {
+						input->data.f[0] = movement_level;        // Movement level
+						input->data.f[1] = quality.final_quality; // Quality score
+					} else if (input_size >= 1) {
+						input->data.f[0] = movement_level;        // Movement level only
+					}
+					// Run the model
+					uint32_t time_start_invoke = HAL_GetTick();
+					if(interpreter.Invoke() != kTfLiteOk){
+						sprintf((char *)&text, "TFLM Invoke Failed!!\r\n");
+						UART_Send_String((char*)text);
+						while(1);
+					}
+					uint32_t time_end_invoke = HAL_GetTick();
+					sprintf((char *)&text, "invoke : %lums\n\r",(unsigned long)(time_end_invoke - time_start_invoke));
+					UART_Send_String((char*)text);
+
+					TfLiteTensor* output = interpreter.output(0);
+					int top_prediction = GetSmoothedPrediction(output->data.f, &prob_queue);
+					if(top_prediction == 0){
+						current_user_state = UNKNOWN;
+						awake_count = 0; // Reset awake count
+					}
+					else if(top_prediction == 1){
+						current_user_state = SLEEP;
+						awake_count = 0; // Reset awake count
+					}
+					else if(top_prediction == 2){
+						if(awake_count < 2){
+							awake_count++;
+						}
+						else{
+							current_user_state = AWAKE;
+						}
+						current_user_state = UNKNOWN;
+					}
+					else{
+						continue;
+					}
+				}
+				if(uart3_rx_flag){
+					uart3_rx_flag = 0;
+					SimplePacket_t received_packet;
+					ReceivePacket(&received_packet);
+					if(received_packet.msg_type == MSG_DATA && received_packet.data == 0x00){
+						start_time = HAL_GetTick(); // 알람 시작 시간 초기화
+						wakeup_time = 20000; // 20초로 설정
+						current_mode = SLEEP_MODE; // 슬립 모드로 전환
+						//snooze -> 마이크 off
+						SimplePacket_t wakeup_packet;
+						wakeup_packet.start_byte = PACKET_START_BYTE;
+						wakeup_packet.msg_type = MSG_FLAG;
+						wakeup_packet.data = 0x00; // 마이크 OFF
+						wakeup_packet.end_byte = PACKET_END_BYTE;
+						SendPacket(&wakeup_packet);
+
+					}
+					else if(received_packet.msg_type == MSG_FLAG && received_packet.data == 0x01){
+						start_time = HAL_GetTick(); // 알람 시작 시간 초기화
+						wakeup_time = 10000; // 10초로 설정
+						current_mode = SLEEP_MODE; // 슬립 모드로 전환
+						//snooze -> 마이크 off
+						SimplePacket_t wakeup_packet;
+						wakeup_packet.start_byte = PACKET_START_BYTE;
+						wakeup_packet.msg_type = MSG_FLAG;
+						wakeup_packet.data = 0x00; // 마이크 OFF
+						wakeup_packet.end_byte = PACKET_END_BYTE;
+						SendPacket(&wakeup_packet);
+					}
+				}
+				if(current_user_state == AWAKE){
+					alarm_flag = false; // Reset alarm flag
+					Buzzer_Off();
+					SimplePacket_t wakeup_packet;
+					wakeup_packet.start_byte = PACKET_START_BYTE;
+					wakeup_packet.msg_type = MSG_FLAG;
+					wakeup_packet.data = 0x00; // 마이크 OFF
+					wakeup_packet.end_byte = PACKET_END_BYTE;
+					SendPacket(&wakeup_packet);
+					break; // 기상 모드 종료
+				}
+			}
+			else{
+				// (b) Alarm flag가 Off일 경우
+				SimplePacket_t wakeup_packet;
+				wakeup_packet.start_byte = PACKET_START_BYTE;
+				wakeup_packet.msg_type = MSG_FLAG;
+				wakeup_packet.data = 0x00; // 마이크 OFF
+				wakeup_packet.end_byte = PACKET_END_BYTE;
+				SendPacket(&wakeup_packet);
+				break; // 기상 모드 종료
+			}
+		}
+		else if(current_mode == FRENZY_MODE){
+			// 긴급 모드 처리 (추후 구현)
+			// 기본적으로 더 강력한 알람 처리
+			IoT_SendCommand(IOT_CMD_SPEAKER_ON);
+			IoT_SendCommand(IOT_CMD_TV_ON);
+			IoT_SendCommand(IOT_CMD_LIGHT_ON);
+			IoT_SendCommand(IOT_CMD_AC_ON);
+
+			if(IQ_ConvertQueueToIQQueues(&test_queue, &i_data_queue, &q_data_queue) != HAL_OK){
+				// UART_Send_String("Error converting UART data to I/Q queues\r\n");
+				continue;
+			}
+			if(IQ_CheckIQQueuesReady(&i_data_queue, &q_data_queue) == HAL_OK){
+				if(IQ_ProcessFloatQueues(&i_data_queue, &q_data_queue, &quality) == HAL_OK){
+				}
+				//movement detection result
+				float movement_level = Movement_CalculateLevel(&i_data_queue, &q_data_queue);
+				IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+				IoT_SendCommand(IOT_CMD_AC_OFF);
+				// 입력 텐서 크기 확인 후 안전하게 설정
+				int input_size = input->dims->data[1];
+				if (input_size >= 3) {
+					input->data.f[0] = movement_level;        // Movement level
+					input->data.f[1] = quality.final_quality; // Quality score
+					input->data.f[2] = quality.phase_std;     // Phase std
+				} else if (input_size >= 2) {
+					input->data.f[0] = movement_level;        // Movement level
+					input->data.f[1] = quality.final_quality; // Quality score
+				} else if (input_size >= 1) {
+					input->data.f[0] = movement_level;        // Movement level only
+				}
+				// Run the model
+				uint32_t time_start_invoke = HAL_GetTick();
+				if(interpreter.Invoke() != kTfLiteOk){
+					sprintf((char *)&text, "TFLM Invoke Failed!!\r\n");
+					UART_Send_String((char*)text);
+					while(1);
+				}
+				uint32_t time_end_invoke = HAL_GetTick();
+				sprintf((char *)&text, "invoke : %lums\n\r",(unsigned long)(time_end_invoke - time_start_invoke));
+				UART_Send_String((char*)text);
+
+				TfLiteTensor* output = interpreter.output(0);
+				int top_prediction = GetSmoothedPrediction(output->data.f, &prob_queue);
+				if(top_prediction == 0){
+					current_user_state = UNKNOWN;
+					awake_count = 0; // Reset awake count
+				}
+				else if(top_prediction == 1){
+					current_user_state = SLEEP;
+					awake_count = 0; // Reset awake count
+				}
+				else if(top_prediction == 2){
+					if(awake_count < 2){
+						awake_count++;
+					}
+					else{
+						current_user_state = AWAKE;
+					}
+					current_user_state = UNKNOWN;
+				}
+				else{
+					continue;
+				}
+				IoT_SendCommand(IOT_CMD_LIGHT_ON);
+				IoT_SendCommand(IOT_CMD_AC_ON);
+			}
+			if(uart3_rx_flag){
+				uart3_rx_flag = 0;
+				SimplePacket_t received_packet;
+				ReceivePacket(&received_packet);
+				if(received_packet.msg_type == MSG_DATA && received_packet.data == 0x00){
+					start_time = HAL_GetTick(); // 알람 시작 시간 초기화
+					wakeup_time = 20000; // 20초로 설정
+					current_mode = SLEEP_MODE; // 슬립 모드로 전환
+					SimplePacket_t wakeup_packet;
+					wakeup_packet.start_byte = PACKET_START_BYTE;
+					wakeup_packet.msg_type = MSG_FLAG;
+					wakeup_packet.data = 0x00; // 마이크 OFF
+					wakeup_packet.end_byte = PACKET_END_BYTE;
+					SendPacket(&wakeup_packet);
+				}
+				else if(received_packet.msg_type == MSG_FLAG && received_packet.data == 0x01){
+					start_time = HAL_GetTick(); // 알람 시작 시간 초기화
+					wakeup_time = 10000; // 10초로 설정
+					current_mode = SLEEP_MODE; // 슬립 모드로 전환
+					SimplePacket_t wakeup_packet;
+					wakeup_packet.start_byte = PACKET_START_BYTE;
+					wakeup_packet.msg_type = MSG_FLAG;
+					wakeup_packet.data = 0x00; // 마이크 OFF
+					wakeup_packet.end_byte = PACKET_END_BYTE;
+					SendPacket(&wakeup_packet);
+				}
+			}
+				if(current_user_state == AWAKE){
+					alarm_flag = false; // Reset alarm flag
+					IoT_SendCommand(IOT_CMD_TV_OFF);
+					IoT_SendCommand(IOT_CMD_SPEAKER_OFF);
+					IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+					IoT_SendCommand(IOT_CMD_AC_OFF);
+					Buzzer_Off();
+					SimplePacket_t wakeup_packet;
+					wakeup_packet.start_byte = PACKET_START_BYTE;
+					wakeup_packet.msg_type = MSG_FLAG;
+					wakeup_packet.data = 0x00; // 마이크 OFF
+					wakeup_packet.end_byte = PACKET_END_BYTE;
+					SendPacket(&wakeup_packet);
+					break; // 기상 모드 종료
+				}
+			}
+			IoT_SendCommand(IOT_CMD_LIGHT_ON);
+			IoT_SendCommand(IOT_CMD_AC_ON);
 		}
 		
 		// IoT 제어 명령 전송 (조명, 에어컨, TV, 스피커 테스트)
@@ -419,41 +705,68 @@ int main(void)
 		// HAL_Delay(500);
 		// IoT_SendCommand(IOT_CMD_SPEAKER_OFF);
 		// HAL_Delay(500);
-
-		HAL_Delay(100);
-		// Enhanced Buzzer Test - Test every 10 iterations
-		#ifdef USE_BUZZER
-		if (test_counter % 10 == 0) {
-			UART_Send_String("=== Buzzer Test Started! ===\r\n");
-			HAL_Delay(100);
-			
-			// Test sequence: Short beep, pause, longer beep, pause, triple beep
-			Buzzer_Test(500);   // 500ms beep
-			HAL_Delay(300);     // 300ms pause
-			
-			// Triple beep
-			for(int i = 0; i < 3; i++) {
-				Buzzer_Test(130);   // 130ms beep
-				HAL_Delay(80);     // 80ms pause between beeps
-			}
-		}
-		#endif
-	}
-	/* USER CODE END 2 */
 }
+	/* USER CODE END 2 */
 
-int Get_Top_Prediction(const float* predictions, int num_categories) {
-	float max_score = predictions[0];
-	int guess = 0;
+/* ===================================================================
+ * 메인 로직 함수
+ * ===================================================================*/
 
-	for (int category_index = 1; category_index < num_categories; category_index++) {
-		const float category_score = predictions[category_index];
-		if (category_score > max_score) {
-			max_score = category_score;
-			guess = category_index;
-		}
-	}
-	return guess;
+/**
+ * @brief  최근 10개의 확률 배열에 가중치를 적용하여 가장 가능성 높은 상태를 반환합니다.
+ * @param  new_probs:    새로운 예측 확률 배열 (크기: NUM_CLASSES)
+ * @param  queue:        이전 예측 확률들을 저장하는 큐의 포인터
+ * @retval 가장 확률이 높은 클래스 인덱스 (0, 1, 2) 또는 데이터 부족 시 4
+ */
+int GetSmoothedPrediction(const float* new_probs, ProbQueue* queue)
+{
+    // 1. 새로운 예측값을 큐에 추가
+    PredictionProbs new_data;
+    memcpy(new_data.probs, new_probs, sizeof(new_data.probs));
+    ProbQueue_Enqueue(queue, &new_data);
+
+    // 2. 큐에 데이터가 충분하지 않으면 4를 반환
+    if (ProbQueue_Size(queue) < MAX_PROB_QUEUE_SIZE) {
+        return 4; // 데이터 부족
+    }
+    
+    // 3. 가중 평활화 계산
+    float weighted_sums[NUM_CLASSES] = {0.0f};
+    float weight_sum = 0.0f;
+    
+    for (int i = 0; i < MAX_PROB_QUEUE_SIZE; i++) {
+        float weight = (float)(i + 1); // 가중치: 1, 2, ..., 10
+        PredictionProbs current_probs;
+        
+        // 큐에서 i번째 데이터를 가져옴 (오래된 데이터부터 순서대로)
+        if (ProbQueue_Peek(queue, i, &current_probs)) {
+            // 각 클래스(0, 1, 2)의 확률에 가중치를 곱해 누적
+            for (int j = 0; j < NUM_CLASSES; j++) {
+                weighted_sums[j] += current_probs.probs[j] * weight;
+            }
+            weight_sum += weight;
+        }
+    }
+    
+    // 가중 평균 계산
+    float smoothed_probs[NUM_CLASSES];
+    if (weight_sum > 0) {
+        for (int j = 0; j < NUM_CLASSES; j++) {
+            smoothed_probs[j] = weighted_sums[j] / weight_sum;
+        }
+    }
+
+    // 4. 가장 높은 확률의 인덱스(argmax)를 찾아 반환
+    int max_index = 0;
+    float max_prob = -1.0f;
+    for (int j = 0; j < NUM_CLASSES; j++) {
+        if (smoothed_probs[j] > max_prob) {
+            max_prob = smoothed_probs[j];
+            max_index = j;
+        }
+    }
+    
+    return max_index;
 }
 
 

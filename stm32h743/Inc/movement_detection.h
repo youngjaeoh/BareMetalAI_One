@@ -21,10 +21,10 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "stm32h7xx_hal.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include "float_queue.h"
-#include "arm_math.h"
 #include "arm_math.h"
 
 /* Exported types ------------------------------------------------------------*/
