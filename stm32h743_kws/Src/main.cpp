@@ -152,7 +152,15 @@ void SystemClock_Config(void);
 #define FrameWidth 128
 #define FrameHeight 160
 #endif
-
+// IoT 명령 상수들
+#define IOT_CMD_LIGHT_ON     "light on"
+#define IOT_CMD_LIGHT_OFF    "light off"
+#define IOT_CMD_AC_ON        "airconditioner on"
+#define IOT_CMD_AC_OFF       "airconditioner off"
+#define IOT_CMD_TV_ON        "tv on"
+#define IOT_CMD_TV_OFF       "tv off"
+#define IOT_CMD_SPEAKER_ON   "speaker on"
+#define IOT_CMD_SPEAKER_OFF  "speaker off"
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -227,10 +235,10 @@ void LED_Blink(uint32_t Hdelay, uint32_t Ldelay)
 	HAL_GPIO_WritePin(PE3_GPIO_Port, PE3_Pin, GPIO_PIN_RESET);
 	HAL_Delay(Ldelay - 1);
 }
+void IoT_SendCommand(const char* command);
+
 /* USER CODE END 0 */
 
-// Ping-Pong 테스트 루프 함수 분리
-void PingPongTestLoop(void);
 
 /**
  * @brief  The application entry point.
@@ -320,9 +328,6 @@ int main(void)
 	micro_op_resolver.AddDepthwiseConv2D();
 	micro_op_resolver.AddMean();
 	micro_op_resolver.AddFullyConnected();
-//	micro_op_resolver.AddTranspose();
-//	micro_op_resolver.AddMaxPool2D();
-//	micro_op_resolver.AddReshape();
 	micro_op_resolver.AddSoftmax();
 //	uint8_t text[80];
 	tflite::MicroInterpreter interpreter(model, micro_op_resolver, tensor_arena, tensor_arena_size);
@@ -343,23 +348,92 @@ int main(void)
 	SimplePacket_t packet;
 	sprintf((char *)&text, "Ready...\r\n");
 	UART_Send_String((char *)text);
+	uint32_t frenzy_start_time = HAL_GetTick();
+	bool frenzy_mode = false;
+	bool frenzy_executed = false;
+	uint32_t running_count = 0;
+	uint32_t last_update_tick = 0;
+	uint32_t frenzy_enter_time = 0;
 	while (1)
 	{
-//	  if (model_input_ready) {
-//		model_input_start_idx = (model_inputbuf_idx - NUM_FRAMES + MODEL_INPUT_BUFFER_SIZE) % MODEL_INPUT_BUFFER_SIZE - 1;
-//		processing_start_time = HAL_GetTick();
-//		result = run_model_inference(&interpreter, model_input, model_input_start_idx);
-//		processing_end_time = HAL_GetTick();
-//
-//		// Processing time 계산 및 UART 출력
-//		uint32_t processing_time = processing_end_time - processing_start_time;
-//		char timing_str[128];
-//		sprintf(timing_str, "Model Inference Time: %lu ms\r\n", processing_time);
-//		UART_Send_String(timing_str);
-//
-//		model_input_ready = 0;
-//	  }
-		LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"Running...");
+        
+		if (HAL_GetTick() - last_update_tick >= 1000) { // 1초마다
+			running_count++;
+			char running_str[32];
+			sprintf(running_str, "Running... #%lu", running_count);
+			LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)running_str);
+			last_update_tick = HAL_GetTick();
+		}
+		// frenzy 모드 진입 조건 체크
+		if (!frenzy_mode && (HAL_GetTick() - frenzy_start_time > 20000)) {
+			frenzy_mode = true;
+			frenzy_enter_time = HAL_GetTick();
+		}
+		if (frenzy_mode && !frenzy_executed) {
+			// 모든 기기 ON 명령 전송
+			IoT_SendCommand(IOT_CMD_LIGHT_ON);
+			IoT_SendCommand(IOT_CMD_AC_ON);
+			IoT_SendCommand(IOT_CMD_TV_ON);
+			IoT_SendCommand(IOT_CMD_SPEAKER_ON);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+			IoT_SendCommand(IOT_CMD_AC_OFF);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_ON);
+			IoT_SendCommand(IOT_CMD_AC_ON);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+			IoT_SendCommand(IOT_CMD_AC_OFF);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_ON);
+			IoT_SendCommand(IOT_CMD_AC_ON);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+			IoT_SendCommand(IOT_CMD_AC_OFF);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_ON);
+			IoT_SendCommand(IOT_CMD_AC_ON);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+			IoT_SendCommand(IOT_CMD_AC_OFF);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_ON);
+			IoT_SendCommand(IOT_CMD_AC_ON);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+			IoT_SendCommand(IOT_CMD_AC_OFF);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_ON);
+			IoT_SendCommand(IOT_CMD_AC_ON);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+			IoT_SendCommand(IOT_CMD_AC_OFF);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_ON);
+			IoT_SendCommand(IOT_CMD_AC_ON);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+			IoT_SendCommand(IOT_CMD_AC_OFF);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_ON);
+			IoT_SendCommand(IOT_CMD_AC_ON);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+			IoT_SendCommand(IOT_CMD_AC_OFF);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_ON);
+			IoT_SendCommand(IOT_CMD_AC_ON);
+            HAL_Delay(200);
+            IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+			IoT_SendCommand(IOT_CMD_AC_OFF);
+			frenzy_executed = true;
+		}
+		// frenzy_mode에서 10초 경과 시 정상 모드 복귀
+		if (frenzy_mode && (HAL_GetTick() - frenzy_enter_time > 10000)) {
+			frenzy_mode = false;
+			frenzy_executed = false;
+			frenzy_start_time = HAL_GetTick();
+		}
 		// 테스트용 데이터 생성 (카운터 포함)
 //		#ifdef USE_UART3
 //		if(uart3_rx_flag){
@@ -404,85 +478,27 @@ int main(void)
 						consecutive_probs[i] = 0.0f;
 					}
 					result_index = 0;
+					// frenzy 타이머 리셋
+					frenzy_start_time = HAL_GetTick();
+					frenzy_mode = false;
+					frenzy_executed = false;
+					// result_idx에 따라 딜레이 및 UART 메시지
+					if (result_idx == 0) {
+						UART_Send_String("Detected class 0, 20s delay done\r\n");
+						HAL_Delay(20000); // 20초
+					} else if (result_idx == 1) {
+						UART_Send_String("Detected class 1, 10s delay done\r\n");
+						HAL_Delay(10000); // 10초
+					}
 				}
 			  }
 			}
 			else{
-//			  HAL_Delay(100);
 			  alarm_flag = Receive_Flag();
-
 			}
 		}
-//
-//			// Process accumulated data
-//			DataTransReceive_ProcessData();
-//		}
 		#endif
-//
-//		// 기존 Thread SPI 테스트 코드 (간소화)
-//		char test_data[32];
-//		snprintf(test_data, sizeof(test_data), "Hello Thread! Cnt=%lu", test_counter++);
-//
-//		// 송신 (Hello Thread!)
-//		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
-//		HAL_Delay(2);
-//		Thread_SPI_SendPacket(&hspi3, THREAD_SPI_CMD_SEND, (uint8_t*)test_data, strlen(test_data));
-//		HAL_Delay(2);
-//		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
-//
-//		UART_Send_String("Sent to ESP: ");
-//		UART_Send_String(test_data);
-//		UART_Send_String("\r\n");
-//
-//		// 수신: 한 번만 ReceivePacket
-//		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
-//		HAL_Delay(2);
-//		Thread_SPI_Packet_t rx_packet;
-//		if (Thread_SPI_ReceivePacket(&hspi3, &rx_packet) == HAL_OK) {
-//			// 필요시 OK 등 수신 데이터 출력 가능
-//		}
-//		HAL_Delay(2);
-//		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
-//
-//		if(uart1_rx_flag){
-//			uart1_rx_flag = 0;
-//			sprintf((char *)&text, "Uart1 Rx : %c\r\n", uart1_rx_data);
-//			UART_Send_String((char *)text);
-//		}
-//		HAL_Delay(100);
-//
-//		// Send the data to mmWave Radar via UART2
-//		#ifdef USE_UART2
-//		if(uart2_rx_flag){
-//			uart2_rx_flag = 0;
-//			if(queue_is_full(&uart2_rx_queue)){
-//				sprintf((char *)&text, "Queue Full! Dequeueing...\r\n");
-//				UART_Send_String((char *)text);
-//				// Dequeue the oldest data if the queue is full
-//				queue_dequeue(&uart2_rx_queue);
-//			}
-//		}
-//		radar_data_process(&uart2_rx_queue);
-//		#endif
-//
-//		HAL_Delay(100);
-//		// Enhanced Buzzer Test - Test every 10 iterations
-//		#ifdef USE_BUZZER
-//		if (test_counter % 10 == 0) {
-//			UART_Send_String("=== Buzzer Test Started! ===\r\n");
-//			HAL_Delay(100);
-//
-//			// Test sequence: Short beep, pause, longer beep, pause, triple beep
-//			Buzzer_Test(500);   // 500ms beep
-//			HAL_Delay(300);     // 300ms pause
-//
-//			// Triple beep
-//			for(int i = 0; i < 3; i++) {
-//				Buzzer_Test(130);   // 130ms beep
-//				HAL_Delay(80);     // 80ms pause between beeps
-//			}
-//		}
-//		#endif
+
 	}
 	/* USER CODE END 2 */
 }
@@ -942,44 +958,15 @@ void assert_failed(uint8_t *file, uint32_t line)
 }
 #endif /* USE_FULL_ASSERT */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
-
-void PingPongTestLoop(void)
+void IoT_SendCommand(const char* command)
 {
-	while (1)
-	{
-		Thread_SPI_UpdateUptime();
+	// 송신 (IoT 명령)
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
+	HAL_Delay(2);
+	Thread_SPI_SendPacket(&hspi3, THREAD_SPI_CMD_SEND, (uint8_t*)command, strlen(command));
+	HAL_Delay(2);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 
-		// Ping
-		LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"Ping Testing...");
-		UART_Send_String("--- Starting SPI transaction ---\r\n");
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
-		UART_Send_String("Sending PING data...\r\n");
-		HAL_StatusTypeDef ping3_result = Thread_SPI_SendPing(&hspi3);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
-		UART_Send_String("--- SPI transaction completed ---\r\n");
-
-		if (ping3_result == HAL_OK) {
-			UART_Send_String("SPI3: Ping sent, check ESP32C6 for Pong!\r\n");
-		} else {
-			UART_Send_String("SPI3: Ping failed!\r\n");
-		}
-		HAL_Delay(100);
-
-		// Pong
-		LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"Pong Testing...");
-		Thread_SPI_Packet_t rx_packet;
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
-		HAL_StatusTypeDef pong_result = Thread_SPI_ReceivePacket(&hspi3, &rx_packet);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
-
-		if (pong_result == HAL_OK && rx_packet.header == 0xA5 && rx_packet.command == 0x04 && rx_packet.length == 0) {
-			char buf[64];
-			snprintf(buf, sizeof(buf), "SPI3: PONG received! 0x%02X 0x%02X 0x%02X\r\n", rx_packet.header, rx_packet.command, rx_packet.length);
-			UART_Send_String(buf);
-		} else {
-			UART_Send_String("SPI3: Pong receive failed or invalid packet!\r\n");
-		}
-		HAL_Delay(2000);
-	}
+	UART_Send_String((char*)command);
+	UART_Send_String((char*)"\r\n");
 }
