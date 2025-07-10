@@ -50,8 +50,9 @@
 #include "tensorflow/lite/micro/system_setup.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/micro/micro_profiler.h"
+#include <utility>  // std::pair를 위한 헤더
 
-#include "models/kws_pqt_int_model_mfcc13_nmels40_silence_unknown_DSCNNSmall.h"
+#include "models/Last_model.h"
 
 
 // === Config & Globals ===
@@ -64,6 +65,8 @@
 #define SAMPLE_RATE 16000
 #define NUM_FRAMES (((SAMPLE_RATE - FRAME_SIZE) / HOP_SIZE) + 1)
 #define M_PI 3.14159265358979323846f
+#define CONSECUTIVE_COUNT 5  // 연속으로 같은 결과가 나와야 하는 횟수
+#define MIN_PROBABILITY_THRESHOLD 0.90f  // 최소 확률 임계값 (90%)
 
 static int32_t audioBuf[AUDIO_BUF_LEN];
 extern const int16_t audio_data[16000];
@@ -90,11 +93,15 @@ static int frame_counter = 0;
 static volatile int model_input_ready = 0;
 static int stride_counter = -1;
 
+// 연속 결과 추적을 위한 변수들
+static int consecutive_results[CONSECUTIVE_COUNT] = {-1, -1, -1, -1, -1};  // 최근 5개 결과 저장
+static float consecutive_probs[CONSECUTIVE_COUNT] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f};  // 최근 5개 확률 저장
+static int result_index = 0;  // 결과 배열의 현재 인덱스
+
 static uint32_t processing_start_time = 0;
 static uint32_t processing_end_time = 0;
 constexpr int tensor_arena_size = 100 * 1024;
 static uint8_t tensor_arena[tensor_arena_size];
-static int result;
 
 // === 함수 선언 ===
 void SystemClock_Config(void);
@@ -104,7 +111,8 @@ void dct2_ortho(const float *in, float *out, int N, int K);
 void process_mfcc_if_ready();
 void push_samples_to_circbuf(const int32_t *src, int n);
 void compute_mean_std(const float32_t model_input[MODEL_INPUT_BUFFER_SIZE][NUM_MFCC], float32_t *mean, float32_t *std, uint32_t model_input_start_idx);
-int run_model_inference(tflite::MicroInterpreter* interpreter, const float32_t model_input[MODEL_INPUT_BUFFER_SIZE][NUM_MFCC], uint32_t model_input_start_idx);
+std::pair<int, float> run_model_inference(tflite::MicroInterpreter* interpreter, const float32_t model_input[MODEL_INPUT_BUFFER_SIZE][NUM_MFCC], uint32_t model_input_start_idx);
+bool check_consecutive_results(int new_idx, float new_prob);
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -275,7 +283,7 @@ int main(void)
 	DataTransReceive_Init(BOARD_B);  // Change to BOARD_B for slave board
 	
 	// Test mode selection
-	uint8_t test_mode = 0; // 0: Ping-Pong test, 1: Flag-based data transmission
+	uint8_t test_mode = 1; // 0: Ping-Pong test, 1: Flag-based data transmission
 	uint32_t mode_switch_time = HAL_GetTick();
 	#endif
 
@@ -303,7 +311,7 @@ int main(void)
 	create_mel_filterbank(mel_filterbank, SAMPLE_RATE, FFT_SIZE, NUM_MEL, 0);
 
 	// === 모델 초기화 ===
-	const tflite::Model* model = ::tflite::GetModel(kws_pqt_int_model_mfcc13_nmels40_silence_unknown_DSCNNSmall);
+	const tflite::Model* model = ::tflite::GetModel(Last_model);
 	if (model->version() != TFLITE_SCHEMA_VERSION) {
 		for(;;);
 	}
@@ -330,9 +338,11 @@ int main(void)
 //		__HAL_DMA_ENABLE_IT(&hdma_spi1_rx, DMA_IT_TC | DMA_IT_HT);
 		Error_Handler();
 	}
-	bool alarm_flag = Receive_Flag();
+	bool alarm_flag = true;
+//	bool alarm_flag = Receive_Flag();
 	SimplePacket_t packet;
-
+	sprintf((char *)&text, "Ready...\r\n");
+	UART_Send_String((char *)text);
 	while (1)
 	{
 //	  if (model_input_ready) {
@@ -351,17 +361,17 @@ int main(void)
 //	  }
 		LCD_ShowString(0, 0, ST7735Ctx.Width, 16, 16, (uint8_t*)"Running...");
 		// 테스트용 데이터 생성 (카운터 포함)
-		#ifdef USE_UART3
-		if(uart3_rx_flag){
-			uart3_rx_flag = 0;
-			if(queue_is_full(&uart3_rx_queue)){
-				sprintf((char *)&text, "Queue Full! Dequeueing...\r\n");
-				UART_Send_String((char *)text);
-				// Dequeue the oldest data if the queue is full
-				queue_dequeue(&uart3_rx_queue);
-			}
-		}
-		#endif
+//		#ifdef USE_UART3
+//		if(uart3_rx_flag){
+//			uart3_rx_flag = 0;
+//			if(queue_is_full(&uart3_rx_queue)){
+//				sprintf((char *)&text, "Queue Full! Dequeueing...\r\n");
+//				UART_Send_String((char *)text);
+//				// Dequeue the oldest data if the queue is full
+//				queue_dequeue(&uart3_rx_queue);
+//			}
+//		}
+//		#endif
 		#ifdef USE_UART3
 		if (test_mode == 0) {
 			// Ping-Pong Test Mode
@@ -372,23 +382,35 @@ int main(void)
 			  if (model_input_ready) {
 				model_input_start_idx = (model_inputbuf_idx - NUM_FRAMES + MODEL_INPUT_BUFFER_SIZE) % MODEL_INPUT_BUFFER_SIZE - 1;
 				processing_start_time = HAL_GetTick();
-				result = run_model_inference(&interpreter, model_input, model_input_start_idx);
+				auto result = run_model_inference(&interpreter, model_input, model_input_start_idx);
+				int result_idx = result.first;
+				float result_prob = result.second;
 				processing_end_time = HAL_GetTick();
 				model_input_ready = 0;
-				// Send Packet
-				if (result == 0 || result == 1){
-					packet.data = result;
-					packet.start_byte = PACKET_START_BYTE;
-					packet.end_byte = PACKET_END_BYTE;
-					packet.msg_type = MSG_DATA;
-					SendPacket(&packet);
-					alarm_flag = false;
+				
+				// 연속 결과 확인
+				if (check_consecutive_results(result_idx, result_prob)) {
+					// 연속으로 5개가 같고 평균 확률이 90% 이상인 경우에만 패킷 전송
+					 packet.data = result_idx;
+					 packet.start_byte = PACKET_START_BYTE;
+					 packet.end_byte = PACKET_END_BYTE;
+					 packet.msg_type = MSG_DATA;
+					 SendPacket(&packet);
+//					 alarm_flag = false;
+					
+					// 결과 배열 초기화 (중복 전송 방지)
+					for (int i = 0; i < CONSECUTIVE_COUNT; i++) {
+						consecutive_results[i] = -1;
+						consecutive_probs[i] = 0.0f;
+					}
+					result_index = 0;
 				}
 			  }
 			}
 			else{
-			  HAL_Delay(100);
+//			  HAL_Delay(100);
 			  alarm_flag = Receive_Flag();
+
 			}
 		}
 //
@@ -772,7 +794,7 @@ void compute_mean_std(const float32_t model_input[MODEL_INPUT_BUFFER_SIZE][NUM_M
 }
 
 // 추론을 실행하는 함수 (int8 양자화 모델용)
-int run_model_inference(tflite::MicroInterpreter* interpreter, const float32_t model_input[MODEL_INPUT_BUFFER_SIZE][NUM_MFCC], uint32_t model_input_start_idx) {
+std::pair<int, float> run_model_inference(tflite::MicroInterpreter* interpreter, const float32_t model_input[MODEL_INPUT_BUFFER_SIZE][NUM_MFCC], uint32_t model_input_start_idx) {
     // 입력 텐서 가져오기
     TfLiteTensor* input = interpreter->input(0);
 
@@ -815,7 +837,7 @@ int run_model_inference(tflite::MicroInterpreter* interpreter, const float32_t m
     TfLiteStatus invoke_status = interpreter->Invoke();
     if (invoke_status != kTfLiteOk) {
         UART_Send_String("Error: Model inference failed!\r\n");
-        return -1;
+        return std::make_pair(-1, 0.0f);
     }
 
     // 5. 결과 해석 및 출력
@@ -832,11 +854,57 @@ int run_model_inference(tflite::MicroInterpreter* interpreter, const float32_t m
             max_idx = i;
         }
     }
-    char result_str[256];
-    sprintf(result_str, "Prediction: Class %d, Probability: %d\r\n", max_idx, (int)(max_prob * 100));
-    UART_Send_String(result_str);
+    // char result_str[256];
+    // sprintf(result_str, "Prediction: Class %d, Probability: %d\r\n", max_idx, (int)(max_prob * 100));
+    // UART_Send_String(result_str);
 
-    return max_idx;
+    return std::make_pair(max_idx, max_prob);
+}
+
+// 연속 결과 확인 함수
+bool check_consecutive_results(int new_idx, float new_prob) {
+    // 새로운 결과를 배열에 저장
+    consecutive_results[result_index] = new_idx;
+    consecutive_probs[result_index] = new_prob;
+    result_index = (result_index + 1) % CONSECUTIVE_COUNT;
+    
+    // 모든 결과가 같은지 확인
+    bool all_same = true;
+    for (int i = 1; i < CONSECUTIVE_COUNT; i++) {
+        if (consecutive_results[i] != consecutive_results[0]) {
+            all_same = false;
+            break;
+        }
+    }
+    
+    // 모든 결과가 같고, 유효한 결과인 경우 (0 또는 1)
+    if (all_same && (consecutive_results[0] == 0 || consecutive_results[0] == 1)) {
+        // 평균 확률 계산
+        float avg_prob = 0.0f;
+        for (int i = 0; i < CONSECUTIVE_COUNT; i++) {
+            avg_prob += consecutive_probs[i];
+        }
+        avg_prob /= CONSECUTIVE_COUNT;
+        
+        // 평균 확률이 임계값 이상인지 확인
+        if (avg_prob >= MIN_PROBABILITY_THRESHOLD) {
+            char debug_str[128];
+            if (consecutive_results[0]==0){
+				sprintf(debug_str, "Consecutive detection: Class 10min, Avg Prob: %.2f%%\r\n",
+						avg_prob * 100.0f);
+				UART_Send_String(debug_str);
+            }
+            else if (consecutive_results[0]==1){
+				sprintf(debug_str, "Consecutive detection: Class 5min, Avg Prob: %.2f%%\r\n",
+						avg_prob * 100.0f);
+				UART_Send_String(debug_str);
+			}
+
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 
