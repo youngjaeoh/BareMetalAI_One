@@ -257,6 +257,7 @@ void UART2_StartDMAReception(void) {
     if (HAL_UART_Receive_DMA(&huart2, uart2_dma_buffer, UART2_DMA_BUFFER_SIZE) != HAL_OK) {
         Error_Handler();
     }
+    UART_Send_String("UART2 DMA reception started.\n");
 }
 
 /**

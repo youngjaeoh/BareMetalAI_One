@@ -217,20 +217,20 @@ void LED_Blink(uint32_t Hdelay, uint32_t Ldelay)
 }
 
 // IoT 제어 함수들 구현
-void IoT_SendCommand(const char* command)
-{
-	// 송신 (IoT 명령)
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
-	HAL_Delay(2);
-	Thread_SPI_SendPacket(&hspi3, THREAD_SPI_CMD_SEND, (uint8_t*)command, strlen(command));
-	HAL_Delay(2);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+// void IoT_SendCommand(const char* command)
+// {
+// 	// 송신 (IoT 명령)
+// 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
+// 	HAL_Delay(2);
+// 	Thread_SPI_SendPacket(&hspi3, THREAD_SPI_CMD_SEND, (uint8_t*)command, strlen(command));
+// 	HAL_Delay(2);
+// 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
 
-	UART_Send_String((char*)command);
-	UART_Send_String((char*)"\r\n");
+// 	UART_Send_String((char*)command);
+// 	UART_Send_String((char*)"\r\n");
 
-	HAL_Delay(3000);
-}
+// 	HAL_Delay(3000);
+// }
 
 /* USER CODE END 0 */
 
