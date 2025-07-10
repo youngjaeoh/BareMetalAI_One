@@ -12,7 +12,13 @@ extern "C"{
 // UART2를 사용하려면 아래 주석을 해제하세요
 #define USE_UART2
 // UART3를 사용하려면 아래 주석을 해제하세요
-#define USE_UART3
+// #define USE_UART3
+
+/* DMA UART Reception Configuration */
+#ifdef USE_UART2
+#define UART2_DMA_BUFFER_SIZE 304  // 152 bytes * 2 for double buffering
+#define RADAR_PACKET_SIZE 152      // Single radar packet size
+#endif
 
 /* Private function prototypes -----------------------------------------------*/
 #define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
@@ -26,12 +32,20 @@ extern void USART1_Rx_ISR(UART_HandleTypeDef* huart);
 /* UART2 related declarations - only if USE_UART2 is defined */
 #ifdef USE_UART2
 extern volatile int uart2_rx_flag;
-extern volatile char uart2_rx_data;
+extern volatile char uart2_rx_data[152];
 extern UART_HandleTypeDef huart2;
 extern void UART2_Init(void);
 extern void UART2_Send_Data(uint8_t* data, uint8_t length);
 extern HAL_StatusTypeDef UART2_Send_Data_WithStatus(uint8_t* data, uint8_t length);
 extern void USART2_Rx_ISR(UART_HandleTypeDef* huart);
+
+// DMA-based UART2 reception functions
+extern void UART2_StartDMAReception(void);
+extern void UART2_ProcessDMAData(uint8_t* data, uint16_t size);
+extern uint8_t* UART2_GetDMABuffer(void);
+extern uint16_t UART2_GetDMADataSize(void);
+extern void UART2_ResetDMABuffer(void);
+extern uint8_t UART2_IsDMADataReady(void);
 #endif
 
 /* UART3 related declarations - only if USE_UART3 is defined */

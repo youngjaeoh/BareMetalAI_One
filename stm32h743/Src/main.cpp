@@ -36,9 +36,11 @@
 #include "queue.h"
 #include "float_queue.h"
 #include "queue_10.h"
+// Radar Data Processing
+#include "radar_data_processor.h"
 //IO
 #include "buzzer.h"
-#include "data_trans_receive.h"
+// #include "data_trans_receive.h"
 // Radar
 #include "iq_data_converter.h"
 #include "iq_signal_processing.h"
@@ -85,7 +87,7 @@
 #define MSG_STANDBY_READY    0x08
 
 // 알람 관련 상수들
-#define WAKE_UP_TIMEOUT      10000  // 10초 후 기상으로 간주
+#define WAKE_UP_TIMEOUT      60000  // 1분 후 기상으로 간주
 
 /* USER CODE END PD */
 
@@ -133,8 +135,9 @@ void SystemClock_Config(void);
 #define FrameHeight 160
 #endif
 
-// IoT 제어 함수들
-void IoT_SendCommand(const char* command);
+
+// // IoT 제어 함수들
+// void IoT_SendCommand(const char* command);
 
 // TensorFlow Lite 함수들
 int GetSmoothedPrediction(const float* new_probs, ProbQueue* queue);
@@ -212,6 +215,23 @@ void LED_Blink(uint32_t Hdelay, uint32_t Ldelay)
 	HAL_GPIO_WritePin(PE3_GPIO_Port, PE3_Pin, GPIO_PIN_RESET);
 	HAL_Delay(Ldelay - 1);
 }
+
+// IoT 제어 함수들 구현
+void IoT_SendCommand(const char* command)
+{
+	// 송신 (IoT 명령)
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
+	HAL_Delay(2);
+	Thread_SPI_SendPacket(&hspi3, THREAD_SPI_CMD_SEND, (uint8_t*)command, strlen(command));
+	HAL_Delay(2);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+
+	UART_Send_String((char*)command);
+	UART_Send_String((char*)"\r\n");
+
+	HAL_Delay(3000);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -255,6 +275,13 @@ int main(void)
 	float_queue_init(&q_data_queue);
 	// Initialize ProbQueue for storing recent predictions
 	ProbQueue_Init(&prob_queue);
+
+	#ifdef USE_UART2
+	// Start DMA-based UART2 reception for radar data
+	UART2_StartDMAReception();
+	sprintf((char *)&text, "UART2 DMA reception started\r\n");
+	UART_Send_String((char*)text);
+	#endif
 
 	//model initialization
 	const tflite::Model* model = ::tflite::GetModel(models_tflite_model_qat_model_tflite);
@@ -301,8 +328,6 @@ int main(void)
 	uint8_t test_mode = 0; // 0: Ping-Pong test, 1: Flag-based data transmission
 	uint32_t mode_switch_time = HAL_GetTick();
 	#endif
-	// uint32_t start_time = HAL_GetTick();  // 사용하지 않으므로 주석 처리
-	// Thread_SPI_Packet_t received_packet;  // 사용하지 않으므로 주석 처리
 
 	ST7735_LCD_Driver.FillRect(&st7735_pObj, 0, 0, ST7735Ctx.Width, ST7735Ctx.Height, BLACK);
 
@@ -311,8 +336,6 @@ int main(void)
 	};
 	SignalQuality_t quality = {0};
 	uint32_t start_time = HAL_GetTick();
-	CircularQueue test_queue;
-	queue_init(&test_queue);
 	while (1)
 	{	
 		//Check the time basd on user state
@@ -340,17 +363,16 @@ int main(void)
 			UART_Send_String((char *)text);
 		}
 		
-		#ifdef USE_UART2
-		if(uart2_rx_flag){
-			uart2_rx_flag = 0;
-			if(queue_is_full(&uart2_rx_queue)){
-				sprintf((char *)&text, "Queue Full! Dequeueing...\r\n");
-				UART_Send_String((char *)text);
-				// Dequeue the oldest data if the queue is full
-				queue_dequeue(&uart2_rx_queue);
-			}
-		}
-		#endif
+		// #ifdef USE_UART2
+		// if(uart2_rx_flag){
+		// 	uart2_rx_flag = 0;
+		// 	if(queue_is_full(&uart2_rx_queue)){
+		// 		sprintf((char *)&text, "Queue Full! Dequeueing...\r\n");
+		// 		UART_Send_String((char *)text);
+		// 		// Dequeue the oldest data if the queue is full
+		// 		queue_dequeue(&uart2_rx_queue);
+		// 	}
+		// }
 
 		// #ifdef USE_UART3
 		// if(uart3_rx_flag){
@@ -370,26 +392,63 @@ int main(void)
 		// #endif
 
 		if(current_mode == SLEEP_MODE){
-			// Process the I and Q data queues
+			// Process DMA-based radar data reception
+			#ifdef USE_UART2
+			if(uart2_rx_flag){
+				uart2_rx_flag = 0;
+				
+				// Try DMA-based processing first
+				uint8_t* dma_buffer = UART2_GetDMABuffer();
+				uint16_t dma_size = UART2_GetDMADataSize();
+				
+				if (dma_size > 0) {
+					// Process DMA buffer directly for better performance
+					if (RadarData_ProcessDMABuffer(dma_buffer, dma_size, &i_data_queue, &q_data_queue) == HAL_OK) {
+						UART2_ResetDMABuffer();
+					}
+				}
+				
+				// Fallback to queue-based processing for compatibility
+				if (queue_size(&uart2_rx_queue) >= RADAR_PACKET_SIZE) {
+					IQ_ConvertQueueToIQQueues(&uart2_rx_queue, &i_data_queue, &q_data_queue);
+				}
+			}
+			#else
+			// Process the I and Q data queues (legacy interrupt-based)
 			if(IQ_ConvertQueueToIQQueues(&uart2_rx_queue, &i_data_queue, &q_data_queue) != HAL_OK){
 				// UART_Send_String("Error converting UART data to I/Q queues\r\n");
 				continue;
 			}
+			#endif
+			
 			if(IQ_CheckIQQueuesReady(&i_data_queue, &q_data_queue) == HAL_OK){
 				// 처리된 I/Q 데이터를 저장할 버퍼
 				static float i_data_buffer[250];
 				static float q_data_buffer[250];
 				
 				if(IQ_ProcessFloatQueues(&i_data_queue, &q_data_queue, &quality, i_data_buffer, q_data_buffer) == HAL_OK){
-					// sprintf((char *)text, "Phase STD: %.6f, Quality: %.2f\r\n", 
-					// 		quality.phase_std, quality.final_quality);
-					// UART_Send_String((char *)text);
+					sprintf((char *)text, "Phase STD: %.6f, Quality: %.2f\r\n", 
+							quality.phase_std, quality.final_quality);
+					UART_Send_String((char *)text);
 				}
 				//movement detection result - 이제 동일한 데이터 사용
 				float movement_level = Movement_CalculateLevel(i_data_buffer, q_data_buffer);
-				//sprintf((char*)text, "Movement Level: %.6f\r\n", movement_level);
-				//UART_Send_String((char*)text);
-				
+				sprintf((char*)text, "Movement Level: %.6f\r\n", movement_level);
+				UART_Send_String((char*)text);
+				// uint8_t itdata[4] = {0};
+				// int count = 0;
+				// while(!queue_is_empty(&uart2_rx_queue)){
+				// 	uint8_t data = queue_dequeue(&uart2_rx_queue);
+				// 	for(int i=0;i<12;i++){
+				// 		if(data != paramter[i]){
+				// 			itdata[count] = data;
+				// 			count++;
+				// 			if(count >= 4) break;
+				// 		}
+				// 	}
+				// 	sprintf((char *)&text, "UART2 Rx: %02X\r\n", data);
+				// 	UART_Send_String((char*)text);
+				// }
 				// 입력 텐서 크기 확인 후 안전하게 설정
 				int input_size = input->dims->data[1];
 				if (input_size >= 3) {
@@ -415,8 +474,8 @@ int main(void)
 
 				TfLiteTensor* output = interpreter.output(0);
 				int top_prediction = GetSmoothedPrediction(output->data.f, &prob_queue);
-				// sprintf((char *)&text, "Top Prediction: %d\r\n", top_prediction);
-				// UART_Send_String((char*)text);	
+				sprintf((char *)&text, "Top Prediction: %d\r\n", top_prediction);
+				UART_Send_String((char*)text);	
 				if(top_prediction == 0){
 					current_user_state = UNKNOWN;
 					awake_count = 0; // Reset awake count
@@ -457,21 +516,46 @@ int main(void)
 		}
 		else if(current_mode == WAKEUP_MODE){
 			if (alarm_flag) {
-				// (a) Alarm flag가 On일 경우
-				SimplePacket_t packet;
-				packet.start_byte = PACKET_START_BYTE;
-				packet.msg_type = MSG_FLAG;
-				packet.data = 0x01; // 알람 플래그 ON
-				packet.end_byte = PACKET_END_BYTE;
+				// // (a) Alarm flag가 On일 경우
+				// SimplePacket_t packet;
+				// packet.start_byte = PACKET_START_BYTE;
+				// packet.msg_type = MSG_FLAG;
+				// packet.data = 0x01; // 알람 플래그 ON
+				// packet.end_byte = PACKET_END_BYTE;
 				
-				SendPacket(&packet);
-				alarm_sent = true; // 알람 플래그 전송 완료
+				// SendPacket(&packet);
+				// alarm_sent = true; // 알람 플래그 전송 완료
 				// 초기화 - 알람 시작 시간 저장
-				Buzzer_On();
+				// Buzzer_On();
+				
+				// Process DMA-based radar data reception
+				#ifdef USE_UART2
+				if(uart2_rx_flag){
+					uart2_rx_flag = 0;
+					
+					// Try DMA-based processing first
+					uint8_t* dma_buffer = UART2_GetDMABuffer();
+					uint16_t dma_size = UART2_GetDMADataSize();
+					
+					if (dma_size > 0) {
+						// Process DMA buffer directly for better performance
+						if (RadarData_ProcessDMABuffer(dma_buffer, dma_size, &i_data_queue, &q_data_queue) == HAL_OK) {
+							UART2_ResetDMABuffer();
+						}
+					}
+					
+					// Fallback to queue-based processing for compatibility
+					if (queue_size(&uart2_rx_queue) >= RADAR_PACKET_SIZE) {
+						IQ_ConvertQueueToIQQueues(&uart2_rx_queue, &i_data_queue, &q_data_queue);
+					}
+				}
+				#else
 				if(IQ_ConvertQueueToIQQueues(&uart2_rx_queue, &i_data_queue, &q_data_queue) != HAL_OK){
 					// UART_Send_String("Error converting UART data to I/Q queues\r\n");
 					continue;
 				}
+				#endif
+				
 				if(IQ_CheckIQQueuesReady(&i_data_queue, &q_data_queue) == HAL_OK){
 					// 처리된 I/Q 데이터를 저장할 버퍼
 					static float i_data_buffer2[250];
@@ -528,6 +612,7 @@ int main(void)
 						continue;
 					}
 				}
+				#ifdef USE_UART3
 				if(uart3_rx_flag){
 					uart3_rx_flag = 0;
 					SimplePacket_t received_packet;
@@ -558,41 +643,66 @@ int main(void)
 						SendPacket(&wakeup_packet);
 					}
 				}
+				#endif
 				if(current_user_state == AWAKE){
 					alarm_flag = false; // Reset alarm flag
-					Buzzer_Off();
-					SimplePacket_t wakeup_packet;
-					wakeup_packet.start_byte = PACKET_START_BYTE;
-					wakeup_packet.msg_type = MSG_FLAG;
-					wakeup_packet.data = 0x00; // 마이크 OFF
-					wakeup_packet.end_byte = PACKET_END_BYTE;
-					SendPacket(&wakeup_packet);
+					// Buzzer_Off();
+					// SimplePacket_t wakeup_packet;
+					// wakeup_packet.start_byte = PACKET_START_BYTE;
+					// wakeup_packet.msg_type = MSG_FLAG;
+					// wakeup_packet.data = 0x00; // 마이크 OFF
+					// wakeup_packet.end_byte = PACKET_END_BYTE;
+					// SendPacket(&wakeup_packet);
 					break; // 기상 모드 종료
 				}
 			}
 			else{
-				// (b) Alarm flag가 Off일 경우
-				SimplePacket_t wakeup_packet;
-				wakeup_packet.start_byte = PACKET_START_BYTE;
-				wakeup_packet.msg_type = MSG_FLAG;
-				wakeup_packet.data = 0x00; // 마이크 OFF
-				wakeup_packet.end_byte = PACKET_END_BYTE;
-				SendPacket(&wakeup_packet);
+				// // (b) Alarm flag가 Off일 경우
+				// SimplePacket_t wakeup_packet;
+				// wakeup_packet.start_byte = PACKET_START_BYTE;
+				// wakeup_packet.msg_type = MSG_FLAG;
+				// wakeup_packet.data = 0x00; // 마이크 OFF
+				// wakeup_packet.end_byte = PACKET_END_BYTE;
+				// SendPacket(&wakeup_packet);
 				break; // 기상 모드 종료
 			}
 		}
 		else if(current_mode == FRENZY_MODE){
 			// 긴급 모드 처리 (추후 구현)
 			// 기본적으로 더 강력한 알람 처리
-			IoT_SendCommand(IOT_CMD_SPEAKER_ON);
-			IoT_SendCommand(IOT_CMD_TV_ON);
-			IoT_SendCommand(IOT_CMD_LIGHT_ON);
-			IoT_SendCommand(IOT_CMD_AC_ON);
+			// IoT_SendCommand(IOT_CMD_SPEAKER_ON);
+			// IoT_SendCommand(IOT_CMD_TV_ON);
+			// IoT_SendCommand(IOT_CMD_LIGHT_ON);
+			// IoT_SendCommand(IOT_CMD_AC_ON);
 
+			// Process DMA-based radar data reception
+			#ifdef USE_UART2
+			if(uart2_rx_flag){
+				uart2_rx_flag = 0;
+				
+				// Try DMA-based processing first
+				uint8_t* dma_buffer = UART2_GetDMABuffer();
+				uint16_t dma_size = UART2_GetDMADataSize();
+				
+				if (dma_size > 0) {
+					// Process DMA buffer directly for better performance
+					if (RadarData_ProcessDMABuffer(dma_buffer, dma_size, &i_data_queue, &q_data_queue) == HAL_OK) {
+						UART2_ResetDMABuffer();
+					}
+				}
+				
+				// Fallback to queue-based processing for compatibility
+				if (queue_size(&uart2_rx_queue) >= RADAR_PACKET_SIZE) {
+					IQ_ConvertQueueToIQQueues(&uart2_rx_queue, &i_data_queue, &q_data_queue);
+				}
+			}
+			#else
 			if(IQ_ConvertQueueToIQQueues(&uart2_rx_queue, &i_data_queue, &q_data_queue) != HAL_OK){
 				// UART_Send_String("Error converting UART data to I/Q queues\r\n");
 				continue;
 			}
+			#endif
+			
 			if(IQ_CheckIQQueuesReady(&i_data_queue, &q_data_queue) == HAL_OK){
 				// 처리된 I/Q 데이터를 저장할 버퍼
 				static float i_data_buffer3[250];
@@ -602,8 +712,8 @@ int main(void)
 				}
 				//movement detection result - 이제 동일한 데이터 사용
 				float movement_level = Movement_CalculateLevel(i_data_buffer3, q_data_buffer3);
-				IoT_SendCommand(IOT_CMD_LIGHT_OFF);
-				IoT_SendCommand(IOT_CMD_AC_OFF);
+				// IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+				// IoT_SendCommand(IOT_CMD_AC_OFF);
 				// 입력 텐서 크기 확인 후 안전하게 설정
 				int input_size = input->dims->data[1];
 				if (input_size >= 3) {
@@ -649,9 +759,10 @@ int main(void)
 				else{
 					continue;
 				}
-				IoT_SendCommand(IOT_CMD_LIGHT_ON);
-				IoT_SendCommand(IOT_CMD_AC_ON);
+				// IoT_SendCommand(IOT_CMD_LIGHT_ON);
+				// IoT_SendCommand(IOT_CMD_AC_ON);
 			}
+			#ifdef USE_UART3
 			if(uart3_rx_flag){
 				uart3_rx_flag = 0;
 				SimplePacket_t received_packet;
@@ -679,24 +790,24 @@ int main(void)
 					SendPacket(&wakeup_packet);
 				}
 			}
-				if(current_user_state == AWAKE){
-					alarm_flag = false; // Reset alarm flag
-					IoT_SendCommand(IOT_CMD_TV_OFF);
-					IoT_SendCommand(IOT_CMD_SPEAKER_OFF);
-					IoT_SendCommand(IOT_CMD_LIGHT_OFF);
-					IoT_SendCommand(IOT_CMD_AC_OFF);
-					Buzzer_Off();
-					SimplePacket_t wakeup_packet;
-					wakeup_packet.start_byte = PACKET_START_BYTE;
-					wakeup_packet.msg_type = MSG_FLAG;
-					wakeup_packet.data = 0x00; // 마이크 OFF
-					wakeup_packet.end_byte = PACKET_END_BYTE;
-					SendPacket(&wakeup_packet);
-					break; // 기상 모드 종료
-				}
+			#endif
+			if(current_user_state == AWAKE){
+				alarm_flag = false; // Reset alarm flag
+				// IoT_SendCommand(IOT_CMD_TV_OFF);
+				// IoT_SendCommand(IOT_CMD_SPEAKER_OFF);
+				// IoT_SendCommand(IOT_CMD_LIGHT_OFF);
+				// IoT_SendCommand(IOT_CMD_AC_OFF);
+				// Buzzer_Off();
+				// SimplePacket_t wakeup_packet;
+				// wakeup_packet.start_byte = PACKET_START_BYTE;
+				// wakeup_packet.msg_type = MSG_FLAG;
+				// wakeup_packet.data = 0x00; // 마이크 OFF
+				// wakeup_packet.end_byte = PACKET_END_BYTE;
+				// SendPacket(&wakeup_packet);
+				break; // 기상 모드 종료
 			}
-			IoT_SendCommand(IOT_CMD_LIGHT_ON);
-			IoT_SendCommand(IOT_CMD_AC_ON);
+			// IoT_SendCommand(IOT_CMD_LIGHT_ON);
+			// IoT_SendCommand(IOT_CMD_AC_ON);
 		}
 		
 		// IoT 제어 명령 전송 (조명, 에어컨, TV, 스피커 테스트)
@@ -716,8 +827,11 @@ int main(void)
 		// HAL_Delay(500);
 		// IoT_SendCommand(IOT_CMD_SPEAKER_OFF);
 		// HAL_Delay(500);
-}
+	}
 	/* USER CODE END 2 */
+	
+	return 0;
+}
 
 /* ===================================================================
  * 메인 로직 함수
@@ -876,19 +990,3 @@ void assert_failed(uint8_t *file, uint32_t line)
 #endif /* USE_FULL_ASSERT */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
-
-// IoT 제어 함수들 구현
-void IoT_SendCommand(const char* command)
-{
-	// 송신 (IoT 명령)
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
-	HAL_Delay(2);
-	Thread_SPI_SendPacket(&hspi3, THREAD_SPI_CMD_SEND, (uint8_t*)command, strlen(command));
-	HAL_Delay(2);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
-
-	UART_Send_String((char*)command);
-	UART_Send_String((char*)"\r\n");
-
-	HAL_Delay(3000);
-}

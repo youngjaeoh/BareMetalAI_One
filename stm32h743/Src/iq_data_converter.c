@@ -88,7 +88,18 @@ HAL_StatusTypeDef IQ_ConvertQueueToIQQueues(CircularQueue *input_queue, FloatQue
     // Read and validate start byte
     uint8_t start_byte = queue_dequeue(input_queue);
     if (start_byte != RADAR_START_BYTE) {
-        // IQ_PrintDebug("Invalid start byte", start_byte);
+        uint8_t start_byte_peek = queue_peek(input_queue);
+        while (start_byte_peek != RADAR_START_BYTE) {
+            queue_dequeue(input_queue);
+            start_byte_peek = queue_peek(input_queue);
+            if (queue_is_empty(input_queue)) {
+                IQ_PrintDebug("UART queue empty, no start byte", 0);
+                // for(;;);
+                return HAL_ERROR;
+            }
+        }
+        IQ_PrintDebug("Invalid start byte", start_byte_peek);
+        // for(;;);
         return HAL_ERROR;
     }
     
@@ -118,13 +129,26 @@ HAL_StatusTypeDef IQ_ConvertQueueToIQQueues(CircularQueue *input_queue, FloatQue
     
     // Read and validate end byte
     if (queue_is_empty(input_queue)) {
-        // IQ_PrintDebug("UART queue empty, no end byte", 0);
+        IQ_PrintDebug("UART queue empty, no end byte", 0);
+        // for(;;);
         return HAL_ERROR;
     }
     
     uint8_t end_byte = queue_dequeue(input_queue);
     if (end_byte != RADAR_END_BYTE) {
-        // IQ_PrintDebug("Invalid end byte", end_byte);
+        uint8_t end_byte_peek = queue_peek(input_queue);
+        while (end_byte_peek != RADAR_END_BYTE) {
+            queue_dequeue(input_queue);
+            end_byte_peek = queue_peek(input_queue);
+            if (queue_is_empty(input_queue)) {
+                IQ_PrintDebug("UART queue empty, no end byte", 0);
+                // for(;;);
+                return HAL_ERROR;
+            }
+        }
+        queue_dequeue(input_queue);
+        IQ_PrintDebug("Invalid end byte", end_byte_peek);
+        // for(;;);
         return HAL_ERROR;
     }
     

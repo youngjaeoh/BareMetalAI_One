@@ -267,6 +267,23 @@ void USART3_IRQHandler(void)
 }
 #endif
 
+#ifdef USE_UART2
+extern DMA_HandleTypeDef hdma_uart2_rx;
+/**
+  * @brief This function handles DMA1 Stream5 global interrupt for UART2 RX.
+  */
+void DMA1_Stream5_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Stream5_IRQn 0 */
+
+  /* USER CODE END DMA1_Stream5_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_uart2_rx);
+  /* USER CODE BEGIN DMA1_Stream5_IRQn 1 */
+
+  /* USER CODE END DMA1_Stream5_IRQn 1 */
+}
+#endif
+
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */

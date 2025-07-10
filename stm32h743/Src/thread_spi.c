@@ -1,6 +1,7 @@
 #include "thread_spi.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "uart.h"
 
 static uint32_t system_uptime = 0;
