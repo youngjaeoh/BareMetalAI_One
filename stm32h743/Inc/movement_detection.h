@@ -43,7 +43,7 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Movement_Detection_Init(void);
-float Movement_CalculateLevel(FloatQueue *i_queue, FloatQueue *q_queue);
+float Movement_CalculateLevel(float *i_data, float *q_data);
 
 // Internal helper functions
 HAL_StatusTypeDef Movement_CalculateMagnitude(float *i_data, float *q_data, float *magnitude, uint32_t length);

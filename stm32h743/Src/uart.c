@@ -70,6 +70,7 @@ void UART_Init(void){
 
 // 각 USART/UART 장치별로 작성 -- 장치가 추가되면 장치별로 이름 바꿔가면서 추가
 void UART1_Init(void){	
+  __HAL_RCC_USART1_CLK_ENABLE();
   huart1.Instance        = USART1;
   huart1.Init.BaudRate   = 115200;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
@@ -90,6 +91,7 @@ void UART1_Init(void){
 
 #ifdef USE_UART2
 void UART2_Init(void){
+  __HAL_RCC_USART2_CLK_ENABLE();
   huart2.Instance        = USART2;
   huart2.Init.BaudRate   = 9600;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
@@ -111,6 +113,7 @@ void UART2_Init(void){
 
 #ifdef USE_UART3
 void UART3_Init(void){
+  __HAL_RCC_USART3_CLK_ENABLE();
   huart3.Instance        = USART3;
   huart3.Init.BaudRate   = 115200;
   huart3.Init.WordLength = UART_WORDLENGTH_8B;
@@ -138,7 +141,6 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 
 	if(huart->Instance == USART1){
 		/* Enable USART1 clock */
-		__HAL_RCC_USART1_CLK_ENABLE();
 		
 		RCC_PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART16;
 		RCC_PeriphClkInit.Usart16ClockSelection = RCC_USART16CLKSOURCE_D2PCLK2;
@@ -152,24 +154,22 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 #ifdef USE_UART2
   else if(huart->Instance == USART2){
 		/* Enable USART2 clock */
-		__HAL_RCC_USART2_CLK_ENABLE();
 		
-    RCC_PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2;
+    RCC_PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART234578;
 		RCC_PeriphClkInit.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
 		HAL_RCCEx_PeriphCLKConfig(&RCC_PeriphClkInit);
 
     __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
 
-		HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
+		HAL_NVIC_SetPriority(USART2_IRQn, 1, 2);
 		HAL_NVIC_EnableIRQ(USART2_IRQn);
 	}
 #endif
 #ifdef USE_UART3
   else if(huart->Instance == USART3){
 		/* Enable USART3 clock */
-		__HAL_RCC_USART3_CLK_ENABLE();
 		
-    RCC_PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART3;
+    RCC_PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART234578;
 		RCC_PeriphClkInit.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
 		HAL_RCCEx_PeriphCLKConfig(&RCC_PeriphClkInit);
 

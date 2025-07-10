@@ -27,6 +27,7 @@ Release/
 
 # STM32 Debug files
 **/stm32h743 Debug.launch
+**/stm32h743/stm32h743.launch
 
 # Common files to ignore
 .DS_Store

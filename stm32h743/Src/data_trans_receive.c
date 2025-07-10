@@ -29,7 +29,6 @@ extern ST7735_Ctx_t ST7735Ctx;
 /* Private variables ---------------------------------------------------------*/
 BoardMode_t current_board_mode;
 CircularQueue uart3_rx_queue;
-CircularQueue data_process_queue;
 uint8_t flag_status = 0;
 uint16_t lcd_line = 0;
 
@@ -57,8 +56,7 @@ void DataTransReceive_Init(BoardMode_t mode)
     
     // Initialize queues
     queue_init(&uart3_rx_queue);
-    queue_init(&data_process_queue);
-    
+
     // Debug: Print board mode
     // sprintf(debug_msg, "Board Mode: %s\r\n", (mode == BOARD_A) ? "MASTER (A)" : "SLAVE (B)");
     // UART_Send_String(debug_msg);

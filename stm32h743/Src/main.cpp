@@ -28,7 +28,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
 #include <stdio.h>
 #include <stdint.h>
 
@@ -248,7 +247,7 @@ int main(void)
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 	/* USER CODE BEGIN 2 */
-	
+
 	uint8_t text[32];
 	// Initialize UART RX Queues
 	queue_init(&uart2_rx_queue);
@@ -319,7 +318,7 @@ int main(void)
 		//Check the time basd on user state
 		uint32_t mode_time = HAL_GetTick() - start_time;
 		if( mode_time >= wakeup_time) { // 10 seconds
-			if(mode_time+10000 >= wakeup_time){
+			if(mode_time >= wakeup_time+10000){
 				current_mode = FRENZY_MODE;
 			}
 			else{
@@ -327,12 +326,12 @@ int main(void)
 			}
 		}
 		
-		//Test Data
-		queue_enqueue(&test_queue,0xEE);
-		for(int i=0;i<150;i++){
-			queue_enqueue(&test_queue, i);
-		}
-		queue_enqueue(&test_queue,0XAA);
+		// Test Data
+		// queue_enqueue(&test_queue,0xEE);
+		// for(int i=0;i<150;i++){
+		// 	queue_enqueue(&test_queue, i);
+		// }
+		// queue_enqueue(&test_queue,0XAA);
 
 		// Check the flags ON
 		if(uart1_rx_flag){
@@ -353,22 +352,22 @@ int main(void)
 		}
 		#endif
 
-		#ifdef USE_UART3
-		if(uart3_rx_flag){
-			uart3_rx_flag = 0;
-			if(test_mode == 0){
-				DataTransReceive_PingPongTest();
-			}
-			init_packet.start_byte = queue_dequeue(&uart3_rx_queue);
-			init_packet.msg_type = queue_dequeue(&uart3_rx_queue);
-			init_packet.data = queue_dequeue(&uart3_rx_queue);
-			init_packet.end_byte = queue_dequeue(&uart3_rx_queue);
-			sprintf((char *)text, "Uart3 Rx : %02X %02X %02X %02X\r\n", 
-					init_packet.start_byte, init_packet.msg_type, init_packet.data, init_packet.end_byte);
-			UART_Send_String((char *)text);
-			// Process the received packet
-		}
-		#endif
+		// #ifdef USE_UART3
+		// if(uart3_rx_flag){
+		// 	uart3_rx_flag = 0;
+		// 	if(test_mode == 0){
+		// 		DataTransReceive_PingPongTest();
+		// 	}
+		// 	init_packet.start_byte = queue_dequeue(&uart3_rx_queue);
+		// 	init_packet.msg_type = queue_dequeue(&uart3_rx_queue);
+		// 	init_packet.data = queue_dequeue(&uart3_rx_queue);
+		// 	init_packet.end_byte = queue_dequeue(&uart3_rx_queue);
+		// 	sprintf((char *)text, "Uart3 Rx : %02X %02X %02X %02X\r\n", 
+		// 			init_packet.start_byte, init_packet.msg_type, init_packet.data, init_packet.end_byte);
+		// 	UART_Send_String((char *)text);
+		// 	// Process the received packet
+		// }
+		// #endif
 
 		if(current_mode == SLEEP_MODE){
 			// Process the I and Q data queues
@@ -377,13 +376,17 @@ int main(void)
 				continue;
 			}
 			if(IQ_CheckIQQueuesReady(&i_data_queue, &q_data_queue) == HAL_OK){
-				if(IQ_ProcessFloatQueues(&i_data_queue, &q_data_queue, &quality) == HAL_OK){
+				// 처리된 I/Q 데이터를 저장할 버퍼
+				static float i_data_buffer[250];
+				static float q_data_buffer[250];
+				
+				if(IQ_ProcessFloatQueues(&i_data_queue, &q_data_queue, &quality, i_data_buffer, q_data_buffer) == HAL_OK){
 					// sprintf((char *)text, "Phase STD: %.6f, Quality: %.2f\r\n", 
 					// 		quality.phase_std, quality.final_quality);
 					// UART_Send_String((char *)text);
 				}
-				//movement detection result
-				float movement_level = Movement_CalculateLevel(&i_data_queue, &q_data_queue);
+				//movement detection result - 이제 동일한 데이터 사용
+				float movement_level = Movement_CalculateLevel(i_data_buffer, q_data_buffer);
 				//sprintf((char*)text, "Movement Level: %.6f\r\n", movement_level);
 				//UART_Send_String((char*)text);
 				
@@ -470,10 +473,14 @@ int main(void)
 					continue;
 				}
 				if(IQ_CheckIQQueuesReady(&i_data_queue, &q_data_queue) == HAL_OK){
-					if(IQ_ProcessFloatQueues(&i_data_queue, &q_data_queue, &quality) == HAL_OK){
+					// 처리된 I/Q 데이터를 저장할 버퍼
+					static float i_data_buffer2[250];
+					static float q_data_buffer2[250];
+					
+					if(IQ_ProcessFloatQueues(&i_data_queue, &q_data_queue, &quality, i_data_buffer2, q_data_buffer2) == HAL_OK){
 					}
-					//movement detection result
-					float movement_level = Movement_CalculateLevel(&i_data_queue, &q_data_queue);
+					//movement detection result - 이제 동일한 데이터 사용
+					float movement_level = Movement_CalculateLevel(i_data_buffer2, q_data_buffer2);
 					
 					// 입력 텐서 크기 확인 후 안전하게 설정
 					int input_size = input->dims->data[1];
@@ -587,10 +594,14 @@ int main(void)
 				continue;
 			}
 			if(IQ_CheckIQQueuesReady(&i_data_queue, &q_data_queue) == HAL_OK){
-				if(IQ_ProcessFloatQueues(&i_data_queue, &q_data_queue, &quality) == HAL_OK){
+				// 처리된 I/Q 데이터를 저장할 버퍼
+				static float i_data_buffer3[250];
+				static float q_data_buffer3[250];
+				
+				if(IQ_ProcessFloatQueues(&i_data_queue, &q_data_queue, &quality, i_data_buffer3, q_data_buffer3) == HAL_OK){
 				}
-				//movement detection result
-				float movement_level = Movement_CalculateLevel(&i_data_queue, &q_data_queue);
+				//movement detection result - 이제 동일한 데이터 사용
+				float movement_level = Movement_CalculateLevel(i_data_buffer3, q_data_buffer3);
 				IoT_SendCommand(IOT_CMD_LIGHT_OFF);
 				IoT_SendCommand(IOT_CMD_AC_OFF);
 				// 입력 텐서 크기 확인 후 안전하게 설정

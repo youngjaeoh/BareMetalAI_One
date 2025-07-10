@@ -76,13 +76,15 @@ void IQ_SignalProcessing_Init(void)
 }
 
 /**
-  * @brief  Process I/Q data from float queues and calculate signal quality
+  * @brief  Process I/Q data from float queues and calculate signal quality and movement level
   * @param  i_queue: I component float queue
   * @param  q_queue: Q component float queue
   * @param  quality: Output signal quality structure (phase_std, final_quality)
+  * @param  i_data_out: Output I data buffer (250 samples)
+  * @param  q_data_out: Output Q data buffer (250 samples)
   * @retval HAL status
   */
-HAL_StatusTypeDef IQ_ProcessFloatQueues(FloatQueue *i_queue, FloatQueue *q_queue, SignalQuality_t *quality)
+HAL_StatusTypeDef IQ_ProcessFloatQueues(FloatQueue *i_queue, FloatQueue *q_queue, SignalQuality_t *quality, float *i_data_out, float *q_data_out)
 {
     if (i_queue == NULL || q_queue == NULL || quality == NULL) {
         return HAL_ERROR;
@@ -236,6 +238,14 @@ HAL_StatusTypeDef IQ_ProcessFloatQueues(FloatQueue *i_queue, FloatQueue *q_queue
     
     // IQ_PrintDebugInfo("Phase STD calculated", quality->phase_std);
     // IQ_PrintDebugInfo("Final quality calculated", quality->final_quality);
+    
+    // Copy I/Q data to output buffers if provided
+    if (i_data_out != NULL) {
+        memcpy(i_data_out, i_data_buffer, IQ_PROCESSING_SAMPLES * sizeof(float));
+    }
+    if (q_data_out != NULL) {
+        memcpy(q_data_out, q_data_buffer, IQ_PROCESSING_SAMPLES * sizeof(float));
+    }
     
     return HAL_OK;
 }

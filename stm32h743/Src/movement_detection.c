@@ -77,35 +77,21 @@ void Movement_Detection_Init(void)
 }
 
 /**
-  * @brief  Calculate movement level from I/Q data queues
+  * @brief  Calculate movement level from I/Q data arrays (not queues)
   *         Returns only normalized_movement value (0-100)
-  * @param  i_queue: I component float queue
-  * @param  q_queue: Q component float queue
+  * @param  i_data: I component data array (250 samples)
+  * @param  q_data: Q component data array (250 samples)
   * @retval Normalized movement level (0-100), or 0.0f on error
   */
-float Movement_CalculateLevel(FloatQueue *i_queue, FloatQueue *q_queue)
+float Movement_CalculateLevel(float *i_data, float *q_data)
 {
-    if (i_queue == NULL || q_queue == NULL) {
+    if (i_data == NULL || q_data == NULL) {
         return 0.0f;
     }
     
-    // Check if we have enough data (250 samples each)
-    if (float_queue_count(i_queue) < MOVEMENT_PROCESSING_SAMPLES || 
-        float_queue_count(q_queue) < MOVEMENT_PROCESSING_SAMPLES) {
-        // Movement_PrintDebugInfo("Not enough data in queues", float_queue_count(i_queue));
-        return 0.0f;
-    }
-    
-    // Movement_PrintDebugInfo("Processing movement level, samples", MOVEMENT_PROCESSING_SAMPLES);
-    
-    // Extract 250 samples from each queue
-    for (uint32_t i = 0; i < MOVEMENT_PROCESSING_SAMPLES; i++) {
-        if (!float_queue_dequeue(i_queue, &i_data_buffer[i]) ||
-            !float_queue_dequeue(q_queue, &q_data_buffer[i])) {
-            // Movement_PrintDebugInfo("Failed to dequeue data at sample", i);
-            return 0.0f;
-        }
-    }
+    // Copy input data to working buffers
+    memcpy(i_data_buffer, i_data, MOVEMENT_PROCESSING_SAMPLES * sizeof(float));
+    memcpy(q_data_buffer, q_data, MOVEMENT_PROCESSING_SAMPLES * sizeof(float));
     
     // Step 1: Calculate magnitude = np.abs(complex_signal)
     if (Movement_CalculateMagnitude(i_data_buffer, q_data_buffer, magnitude_buffer, MOVEMENT_PROCESSING_SAMPLES) != HAL_OK) {

@@ -48,7 +48,7 @@ typedef struct {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void IQ_SignalProcessing_Init(void);
-HAL_StatusTypeDef IQ_ProcessFloatQueues(FloatQueue *i_queue, FloatQueue *q_queue, SignalQuality_t *quality);
+HAL_StatusTypeDef IQ_ProcessFloatQueues(FloatQueue *i_queue, FloatQueue *q_queue, SignalQuality_t *quality, float *i_data_out, float *q_data_out);
 
 // Internal helper functions (processing 250 samples)
 HAL_StatusTypeDef IQ_ComputePhase(float *i_data, float *q_data, float *phase_data, uint32_t length);
