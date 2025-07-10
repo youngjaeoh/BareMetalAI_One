@@ -371,7 +371,7 @@ int main(void)
 
 		if(current_mode == SLEEP_MODE){
 			// Process the I and Q data queues
-			if(IQ_ConvertQueueToIQQueues(&test_queue, &i_data_queue, &q_data_queue) != HAL_OK){
+			if(IQ_ConvertQueueToIQQueues(&uart2_rx_queue, &i_data_queue, &q_data_queue) != HAL_OK){
 				// UART_Send_String("Error converting UART data to I/Q queues\r\n");
 				continue;
 			}
@@ -468,7 +468,7 @@ int main(void)
 				alarm_sent = true; // 알람 플래그 전송 완료
 				// 초기화 - 알람 시작 시간 저장
 				Buzzer_On();
-				if(IQ_ConvertQueueToIQQueues(&test_queue, &i_data_queue, &q_data_queue) != HAL_OK){
+				if(IQ_ConvertQueueToIQQueues(&uart2_rx_queue, &i_data_queue, &q_data_queue) != HAL_OK){
 					// UART_Send_String("Error converting UART data to I/Q queues\r\n");
 					continue;
 				}
@@ -589,7 +589,7 @@ int main(void)
 			IoT_SendCommand(IOT_CMD_LIGHT_ON);
 			IoT_SendCommand(IOT_CMD_AC_ON);
 
-			if(IQ_ConvertQueueToIQQueues(&test_queue, &i_data_queue, &q_data_queue) != HAL_OK){
+			if(IQ_ConvertQueueToIQQueues(&uart2_rx_queue, &i_data_queue, &q_data_queue) != HAL_OK){
 				// UART_Send_String("Error converting UART data to I/Q queues\r\n");
 				continue;
 			}
