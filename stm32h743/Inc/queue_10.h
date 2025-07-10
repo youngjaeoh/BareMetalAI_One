@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-#define MAX_PROB_QUEUE_SIZE 10
+#define MAX_PROB_QUEUE_SIZE 5
 #define NUM_CLASSES 3
 
 // 3개의 확률 값을 저장하는 구조체

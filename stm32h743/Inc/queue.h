@@ -24,6 +24,7 @@ bool queue_is_full(CircularQueue *q);
 bool queue_is_empty(CircularQueue *q);
 uint8_t queue_peek(CircularQueue *q);
 uint8_t queue_size(CircularQueue *q) ;
+uint8_t queue_peek_at(CircularQueue *q, int index);
 
 #ifdef __cplusplus
 }

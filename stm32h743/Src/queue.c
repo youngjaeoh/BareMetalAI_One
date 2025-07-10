@@ -48,3 +48,9 @@ uint8_t queue_size(CircularQueue *q) {
         return (MAX_QUEUE_SIZE - (q->head - q->tail));
     }
 }
+
+uint8_t queue_peek_at(CircularQueue *q, int index) {
+    if (index < 0 || index >= queue_size(q)) return 0; // or error handling
+    int pos = (q->head + index) % MAX_QUEUE_SIZE;
+    return q->buffer[pos];
+}
