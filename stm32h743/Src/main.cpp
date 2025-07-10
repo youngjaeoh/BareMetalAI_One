@@ -393,14 +393,14 @@ int main(void)
 				// 입력 텐서 크기 확인 후 안전하게 설정
 				int input_size = input->dims->data[1];
 				if (input_size >= 3) {
-					input->data.f[0] = movement_level;        // Movement level
-					input->data.f[1] = quality.final_quality; // Quality score
-					input->data.f[2] = quality.phase_std;     // Phase std
+					input->data.f[0] = (movement_level - 4.88975271) / 17.51943747;        // Movement level
+					input->data.f[1] = (quality.final_quality - 48.9534134) / 13.79637277; // Quality score
+					input->data.f[2] = (quality.phase_std - 0.034208115) / 0.08833513;     // Phase std
 				} else if (input_size >= 2) {
-					input->data.f[0] = movement_level;        // Movement level
-					input->data.f[1] = quality.final_quality; // Quality score
+					input->data.f[0] = (movement_level - 4.88975271) / 17.51943747;        // Movement level
+					input->data.f[1] = (quality.final_quality - 48.9534134) / 13.79637277; // Quality score
 				} else if (input_size >= 1) {
-					input->data.f[0] = movement_level;        // Movement level only
+					input->data.f[0] = (movement_level - 4.88975271) / 17.51943747;        // Movement level only
 				}
 				// Run the model
 				uint32_t time_start_invoke = HAL_GetTick();
@@ -485,14 +485,14 @@ int main(void)
 					// 입력 텐서 크기 확인 후 안전하게 설정
 					int input_size = input->dims->data[1];
 					if (input_size >= 3) {
-						input->data.f[0] = movement_level;        // Movement level
-						input->data.f[1] = quality.final_quality; // Quality score
-						input->data.f[2] = quality.phase_std;     // Phase std
+						input->data.f[0] = (movement_level - 4.88975271) / 17.51943747;        // Movement level
+						input->data.f[1] = (quality.final_quality - 48.9534134) / 13.79637277; // Quality score
+						input->data.f[2] = (quality.phase_std - 0.034208115) / 0.08833513;     // Phase std
 					} else if (input_size >= 2) {
-						input->data.f[0] = movement_level;        // Movement level
-						input->data.f[1] = quality.final_quality; // Quality score
+						input->data.f[0] = (movement_level - 4.88975271) / 17.51943747;        // Movement level
+						input->data.f[1] = (quality.final_quality - 48.9534134) / 13.79637277; // Quality score
 					} else if (input_size >= 1) {
-						input->data.f[0] = movement_level;        // Movement level only
+						input->data.f[0] = (movement_level - 4.88975271) / 17.51943747;        // Movement level only
 					}
 					// Run the model
 					uint32_t time_start_invoke = HAL_GetTick();
@@ -607,14 +607,14 @@ int main(void)
 				// 입력 텐서 크기 확인 후 안전하게 설정
 				int input_size = input->dims->data[1];
 				if (input_size >= 3) {
-					input->data.f[0] = movement_level;        // Movement level
-					input->data.f[1] = quality.final_quality; // Quality score
-					input->data.f[2] = quality.phase_std;     // Phase std
+					input->data.f[0] = (movement_level - 4.88975271) / 17.51943747;        // Movement level
+					input->data.f[1] = (quality.final_quality - 48.9534134) / 13.79637277; // Quality score
+					input->data.f[2] = (quality.phase_std - 0.034208115) / 0.08833513;     // Phase std
 				} else if (input_size >= 2) {
-					input->data.f[0] = movement_level;        // Movement level
-					input->data.f[1] = quality.final_quality; // Quality score
+					input->data.f[0] = (movement_level - 4.88975271) / 17.51943747;        // Movement level
+					input->data.f[1] = (quality.final_quality - 48.9534134) / 13.79637277; // Quality score
 				} else if (input_size >= 1) {
-					input->data.f[0] = movement_level;        // Movement level only
+					input->data.f[0] = (movement_level - 4.88975271) / 17.51943747;        // Movement level only
 				}
 				// Run the model
 				uint32_t time_start_invoke = HAL_GetTick();
